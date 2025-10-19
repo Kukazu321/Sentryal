@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "module": "ESNext",
+    "baseUrl": ".",
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"],
+  "files": ["../types/global.d.ts"]
+}
