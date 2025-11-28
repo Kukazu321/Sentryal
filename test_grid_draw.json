@@ -1,0 +1,16 @@
+{
+  "infrastructureId": "REPLACE_WITH_ID",
+  "mode": "DRAW",
+  "polygon": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [2.0, 48.0],
+        [2.005, 48.0],
+        [2.005, 48.005],
+        [2.0, 48.005],
+        [2.0, 48.0]
+      ]
+    ]
+  }
+}

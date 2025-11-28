@@ -1,0 +1,2 @@
+-- Ajouter RUNNING à l'enum JobStatus
+ALTER TYPE "JobStatus" ADD VALUE IF NOT EXISTS 'RUNNING' BEFORE 'PROCESSING';

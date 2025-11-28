@@ -1,0 +1,17 @@
+{
+  "name": "Pont de Test Phase 2",
+  "type": "bridge",
+  "bbox": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [2.0, 48.0],
+        [2.1, 48.0],
+        [2.1, 48.1],
+        [2.0, 48.1],
+        [2.0, 48.0]
+      ]
+    ]
+  },
+  "mode_onboarding": "DRAW"
+}

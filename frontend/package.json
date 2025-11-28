@@ -10,21 +10,42 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@arcgis/core": "^4.34.7",
     "@radix-ui/react-primitive": "^1.0.0",
-    "autoprefixer": "^10.4.14",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@supabase/supabase-js": "^2.75.1",
+    "@tanstack/react-query": "^5.90.7",
+    "axios": "^1.13.2",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^1.2.1",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.553.0",
+    "lz-string": "^1.5.0",
+    "mapbox-gl": "^3.0.0",
     "next": "^14.2.33",
-    "postcss": "^8.4.24",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "tailwindcss": "^4.1.14"
+    "recharts": "^3.4.1",
+    "socket.io-client": "^4.8.1",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.14",
+    "@tanstack/react-query-devtools": "^5.90.2",
+    "@types/jest": "^30.0.0",
+    "@types/lz-string": "^1.5.0",
+    "@types/mapbox-gl": "^3.0.0",
     "@types/node": "^20.4.2",
     "@types/react": "^18.2.21",
+    "@types/react-dom": "^19.2.2",
+    "autoprefixer": "^10.4.17",
     "eslint": "^8.40.0",
     "eslint-config-next": "^14.0.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
     "typescript": "5.3.3"
   }
 }

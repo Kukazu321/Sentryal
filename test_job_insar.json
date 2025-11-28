@@ -1,0 +1,11 @@
+{
+  "infrastructureId": "PLACEHOLDER_ID",
+  "dateRange": {
+    "start": "2024-01-01",
+    "end": "2024-12-31"
+  },
+  "options": {
+    "looks": "20x4",
+    "includeLosDisplacement": true
+  }
+}

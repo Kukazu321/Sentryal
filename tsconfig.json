@@ -2,13 +2,22 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "downlevelIteration": true
   },
-  "include": ["types/**/*.d.ts"],
-  "exclude": ["node_modules", "**/node_modules"]
+  "include": [
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules"
+  ]
 }

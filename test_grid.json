@@ -1,0 +1,16 @@
+{
+  "infrastructureId": "PLACEHOLDER_ID",
+  "mode": "DRAW",
+  "polygon": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [3.0175, 44.0775],
+        [3.0225, 44.0775],
+        [3.0225, 44.0825],
+        [3.0175, 44.0825],
+        [3.0175, 44.0775]
+      ]
+    ]
+  }
+}

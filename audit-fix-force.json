@@ -1,0 +1,262 @@
+{
+  "add": [
+    {
+      "name": "@pinojs/redact",
+      "version": "0.4.0",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@pinojs\\redact"
+    },
+    {
+      "name": "@swc/counter",
+      "version": "0.1.3",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@swc\\counter"
+    },
+    {
+      "name": "sonic-boom",
+      "version": "4.2.0",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\pino\\node_modules\\sonic-boom"
+    },
+    {
+      "name": "pino-abstract-transport",
+      "version": "2.0.0",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\pino\\node_modules\\pino-abstract-transport"
+    }
+  ],
+  "added": 4,
+  "audited": 625,
+  "change": [
+    {
+      "from": {
+        "name": "thread-stream",
+        "version": "2.7.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\thread-stream"
+      },
+      "to": {
+        "name": "thread-stream",
+        "version": "3.1.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\thread-stream"
+      }
+    },
+    {
+      "from": {
+        "name": "process-warning",
+        "version": "3.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\process-warning"
+      },
+      "to": {
+        "name": "process-warning",
+        "version": "5.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\process-warning"
+      }
+    },
+    {
+      "from": {
+        "name": "pino-std-serializers",
+        "version": "6.2.2",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\pino-std-serializers"
+      },
+      "to": {
+        "name": "pino-std-serializers",
+        "version": "7.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\pino-std-serializers"
+      }
+    },
+    {
+      "from": {
+        "name": "pino",
+        "version": "8.21.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\pino"
+      },
+      "to": {
+        "name": "pino",
+        "version": "10.1.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\pino"
+      }
+    },
+    {
+      "from": {
+        "name": "next",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\next"
+      },
+      "to": {
+        "name": "next",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\next"
+      }
+    },
+    {
+      "from": {
+        "name": "@swc/helpers",
+        "version": "0.5.2",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@swc\\helpers"
+      },
+      "to": {
+        "name": "@swc/helpers",
+        "version": "0.5.5",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@swc\\helpers"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-win32-x64-msvc",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-win32-x64-msvc"
+      },
+      "to": {
+        "name": "@next/swc-win32-x64-msvc",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-win32-x64-msvc"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-win32-ia32-msvc",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-win32-ia32-msvc"
+      },
+      "to": {
+        "name": "@next/swc-win32-ia32-msvc",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-win32-ia32-msvc"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-win32-arm64-msvc",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-win32-arm64-msvc"
+      },
+      "to": {
+        "name": "@next/swc-win32-arm64-msvc",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-win32-arm64-msvc"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-linux-x64-musl",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-x64-musl"
+      },
+      "to": {
+        "name": "@next/swc-linux-x64-musl",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-x64-musl"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-linux-x64-gnu",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-x64-gnu"
+      },
+      "to": {
+        "name": "@next/swc-linux-x64-gnu",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-x64-gnu"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-linux-arm64-musl",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-arm64-musl"
+      },
+      "to": {
+        "name": "@next/swc-linux-arm64-musl",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-arm64-musl"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-linux-arm64-gnu",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-arm64-gnu"
+      },
+      "to": {
+        "name": "@next/swc-linux-arm64-gnu",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-linux-arm64-gnu"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-darwin-x64",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-darwin-x64"
+      },
+      "to": {
+        "name": "@next/swc-darwin-x64",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-darwin-x64"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/swc-darwin-arm64",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-darwin-arm64"
+      },
+      "to": {
+        "name": "@next/swc-darwin-arm64",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\swc-darwin-arm64"
+      }
+    },
+    {
+      "from": {
+        "name": "@next/env",
+        "version": "14.0.0",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\env"
+      },
+      "to": {
+        "name": "@next/env",
+        "version": "14.2.33",
+        "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\@next\\env"
+      }
+    }
+  ],
+  "changed": 16,
+  "funding": 173,
+  "remove": [
+    {
+      "name": "watchpack",
+      "version": "2.4.0",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\watchpack"
+    },
+    {
+      "name": "glob-to-regexp",
+      "version": "0.4.1",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\glob-to-regexp"
+    },
+    {
+      "name": "fast-redact",
+      "version": "3.5.0",
+      "path": "C:\\Users\\charl\\Downloads\\Sentryal\\node_modules\\fast-redact"
+    }
+  ],
+  "removed": 3,
+  "audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {},
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 179,
+        "dev": 436,
+        "optional": 58,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 624
+      }
+    }
+  }
+}

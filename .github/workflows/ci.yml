@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install root deps
+        run: npm ci
+      - name: Prettier check
+        run: npx prettier --check .
+      - name: ESLint
+        run: npm run lint
+      - name: Typecheck backend
+        run: npx tsc --noEmit -p backend/tsconfig.build.json
+      - name: Typecheck frontend
+        run: npx tsc --noEmit -p frontend/tsconfig.json

@@ -1,16 +1,120 @@
-version: '3.8'
+version: '3.9'
+
+# SENTRYAL - ULTRA-OPTIMIZED DOCKER COMPOSE
+# Performance-tuned for development and production
+# Includes health checks, resource limits, and monitoring
+
 services:
   postgres:
-    image: postgres:15
+    image: postgis/postgis:15-3.4
+    container_name: sentryal-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-sentryal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-sentryal_dev}
+      # Performance tuning
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_MAINTENANCE_WORK_MEM: 128MB
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_MAX_CONNECTIONS: 200
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d
     ports:
       - '5432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentryal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentryal-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+    command:
+      - redis-server
+      - --appendonly yes
+      - --maxmemory 256mb
+      - --maxmemory-policy noeviction
+      - --save 60 1000
+      - --tcp-backlog 511
+      - --timeout 0
+      - --tcp-keepalive 300
+
+  gmtsar:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gmtsar
+    container_name: sentryal-gmtsar
+    restart: unless-stopped
+    environment:
+      GMTSAR_ROOT: /opt/gmtsar
+      GMT_BIN: /opt/GMT/bin
+      PATH: /opt/GMT/bin:/opt/gmtsar/bin:/usr/local/bin:/usr/bin:/bin
+      LD_LIBRARY_PATH: /opt/GMT/lib:/opt/gmtsar/lib:/usr/local/lib
+    volumes:
+      - gmtsar_dem_cache:/var/cache/gmtsar/dem
+      - gmtsar_orbit_cache:/var/cache/gmtsar/orbits
+      - gmtsar_data:/data
+      - gmtsar_logs:/var/log/gmtsar
+    healthcheck:
+      test: ["CMD", "test", "-f", "/opt/gmtsar/bin/p2p_S1_TOPS_Frame.csh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
 
   backend:
     build:
@@ -20,10 +124,13 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - PORT=5000
+      - GMTSAR_PROCESSOR_URL=http://gmtsar:5001
     ports:
       - '5000:5000'
     depends_on:
       - postgres
+      - redis
+      - gmtsar
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
@@ -33,7 +140,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_API_URL=http://backend:5000
     ports:
       - '3000:3000'
     volumes:
@@ -45,3 +152,8 @@ services:
 
 volumes:
   pgdata:
+  redisdata:
+  gmtsar_dem_cache:
+  gmtsar_orbit_cache:
+  gmtsar_data:
+  gmtsar_logs:

@@ -1,0 +1,16 @@
+name: isce3_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - isce3
+  - gdal
+  - h5py
+  - shapely
+  - numpy
+  - scipy
+  - pip
+  - pip:
+    - asf_search
+    - boto3
+    - python-dotenv

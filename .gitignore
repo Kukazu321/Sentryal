@@ -19,3 +19,12 @@ pnpm-debug.log*
 /*.local
 docker-compose.override.yml
 /*.tgz
+
+# Project specific logs and temp files
+*.log
+*.txt
+*.tar.gz
+*.zip
+*.ps1
+!build_push_docker.ps1
+!deploy_production.ps1

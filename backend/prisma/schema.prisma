@@ -1,0 +1,196 @@
+// Prisma schema for Sentryal with PostGIS support
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enable PostGIS extension (run via SQL migration)
+// CREATE EXTENSION IF NOT EXISTS postgis;
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  supabase_id      String?  @unique
+  stripe_customer_id String?
+  preferences      Json?    // For alert thresholds and user preferences
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  infrastructures Infrastructure[]
+  infrastructureMembers InfrastructureMember[]
+  
+  @@map("users")
+}
+
+enum OnboardingMode {
+  ADDRESS
+  DRAW
+  SHP
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model Infrastructure {
+  id              String         @id @default(uuid())
+  user_id         String
+  name            String   @db.VarChar(255)
+  type            String?  @db.VarChar(100)
+  geom            Unsupported("geometry(Polygon, 4326)")
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  user            User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  points          Point[]
+  jobs            Job[]
+  schedules       JobSchedule[]
+  members         InfrastructureMember[]
+
+  @@index([user_id])
+  @@map("infrastructures")
+}
+
+model Point {
+  id                String   @id @default(uuid())
+  infrastructure_id String
+  geom              String   // PostGIS GEOMETRY(POINT, 4326) - stored as WKT
+  soil_type         String?
+  created_at        DateTime @default(now())
+
+  infrastructure    Infrastructure @relation(fields: [infrastructure_id], references: [id], onDelete: Cascade)
+  deformations      Deformation[]
+
+  @@index([infrastructure_id])
+  // Spatial index on geom will be created via SQL migration (GIST index)
+  @@map("points")
+}
+
+model Deformation {
+  id                String   @id @default(uuid())
+  point_id          String
+  job_id            String
+  date              DateTime @db.Date
+  displacement_mm   Decimal  @db.Decimal(10, 3)
+  coherence         Decimal? @db.Decimal(5, 3)
+  velocity_mm_year  Decimal? @db.Decimal(10, 3)
+  metadata          Json?
+  created_at        DateTime @default(now())
+
+  point             Point    @relation(fields: [point_id], references: [id], onDelete: Cascade)
+  job               Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([point_id, job_id, date])
+  @@index([point_id])
+  @@index([job_id])
+  @@index([date])
+  @@map("deformations")
+}
+
+model Job {
+  id                  String     @id @default(uuid())
+  infrastructure_id   String
+  hy3_job_id          String?    @unique
+  hy3_job_type        String?    @db.VarChar(50)
+  status              JobStatus  @default(PENDING)
+  bbox                String?    // PostGIS GEOMETRY(POLYGON, 4326) - stored as WKT
+  hy3_product_urls    Json?
+  error_message       String?    @db.Text
+  retry_count         Int        @default(0)
+  processing_time_ms  Int?
+  created_at          DateTime   @default(now())
+  completed_at        DateTime?
+
+  infrastructure      Infrastructure @relation(fields: [infrastructure_id], references: [id], onDelete: Cascade)
+  deformations        Deformation[]
+
+  @@index([infrastructure_id])
+  @@index([status])
+  @@index([hy3_job_id])
+  @@map("jobs")
+}
+
+model WorkerLog {
+  id                String    @id @default(uuid())
+  job_id            String?
+  worker_name       String    @db.VarChar(100)
+  level             LogLevel
+  message           String    @db.Text
+  error_stack       String?   @db.Text
+  metadata          Json?
+  created_at        DateTime  @default(now())
+
+  @@index([job_id])
+  @@index([level])
+  @@index([created_at])
+  @@index([worker_name])
+  @@map("worker_logs")
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
+}
+
+model JobSchedule {
+  id                  String    @id @default(uuid())
+  infrastructure_id   String
+  user_id             String
+  name                String    @db.VarChar(255)
+  frequency_days      Int       // How often to run (e.g., 12 days)
+  is_active           Boolean   @default(true)
+  last_run_at         DateTime?
+  next_run_at         DateTime
+  total_runs          Int       @default(0)
+  successful_runs     Int       @default(0)
+  failed_runs         Int       @default(0)
+  options             Json?     // HyP3 job options
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  infrastructure      Infrastructure @relation(fields: [infrastructure_id], references: [id], onDelete: Cascade)
+
+  @@index([infrastructure_id])
+  @@index([user_id])
+  @@index([is_active])
+  @@index([next_run_at])
+  @@map("job_schedules")
+}
+
+// RBAC roles for infrastructure membership
+enum InfraRole {
+  OWNER
+  ADMIN
+  VIEWER
+}
+
+model InfrastructureMember {
+  id                String          @id @default(uuid())
+  user_id           String
+  infrastructure_id String
+  role              InfraRole
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+
+  user              User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  infrastructure    Infrastructure  @relation(fields: [infrastructure_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, infrastructure_id])
+  @@index([user_id])
+  @@index([infrastructure_id])
+  @@map("infrastructure_members")
+}
+
