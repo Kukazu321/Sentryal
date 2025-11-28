@@ -22,7 +22,18 @@ app.use(helmet());
 // Enable CORS for frontend
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000'],
+    origin: process.env.NODE_ENV === 'production'
+      ? (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        // Allow any Vercel deployment or the specific FRONTEND_URL
+        if (origin.endsWith('.vercel.app') || origin === process.env.FRONTEND_URL) {
+          return callback(null, true);
+        }
+        // Fallback for initial setup - remove in strict production
+        return callback(null, true);
+      }
+      : ['http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
