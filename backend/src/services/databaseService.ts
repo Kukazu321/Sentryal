@@ -46,11 +46,10 @@ export class DatabaseService {
             name: string;
             type: string | null;
             geom: string | null;
-            mode_onboarding: string | null;
             created_at: Date;
             updated_at: Date;
-        }>>`
-      SELECT id, user_id, name, type, geom, mode_onboarding, created_at, updated_at
+        }>>\`
+      SELECT id, user_id, name, type, geom, created_at, updated_at
       FROM infrastructures
       WHERE id = ${infrastructureId}::uuid
     `;
@@ -179,11 +178,10 @@ export class DatabaseService {
             name: string;
             type: string | null;
             geom: string | null;
-            mode_onboarding: string | null;
             created_at: Date;
             updated_at: Date;
-        }>>`
-      SELECT i.id, i.user_id, i.name, i.type, i.geom, i.mode_onboarding, i.created_at, i.updated_at
+        }>>\`
+      SELECT i.id, i.user_id, i.name, i.type, i.geom, i.created_at, i.updated_at
       FROM infrastructures i
       WHERE i.user_id = ${userId}::uuid
          OR EXISTS (
@@ -213,21 +211,19 @@ export class DatabaseService {
     ) {
         const bboxJSON = JSON.stringify(data.bbox);
         const id = randomUUID();
-        const modeOnboarding = data.mode_onboarding || null;
         const type = data.type || null;
 
         logger.info({ id, userId, name: data.name }, '[INFRA-CREATE] Creating infrastructure');
 
         try {
             await prisma.$executeRaw`
-        INSERT INTO infrastructures (id, user_id, name, type, geom, mode_onboarding, created_at, updated_at)
+        INSERT INTO infrastructures (id, user_id, name, type, geom, created_at, updated_at)
         VALUES (
           ${id}::uuid,
           ${userId}::uuid,
           ${data.name},
           ${type},
           ${bboxJSON},
-          ${modeOnboarding}::text::"OnboardingMode",
           NOW(),
           NOW()
         )
@@ -245,11 +241,10 @@ export class DatabaseService {
             name: string;
             type: string | null;
             geom: string | null;
-            mode_onboarding: string | null;
             created_at: Date;
             updated_at: Date;
         }>>`
-      SELECT id, user_id, name, type, geom, mode_onboarding, created_at, updated_at
+      SELECT id, user_id, name, type, geom, created_at, updated_at
       FROM infrastructures
       WHERE id = ${id}::uuid
     `;
