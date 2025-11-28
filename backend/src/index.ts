@@ -10,21 +10,20 @@ const PORT = Number(config.port || 5000);
 
 async function startServer() {
   try {
-    // Run migrations before starting server (non-blocking in dev)
+    // Run migrations before starting server (non-blocking)
     if (process.env.RUN_MIGRATIONS !== 'false') {
       try {
         await runMigrations();
       } catch (migrationError) {
-        // In dev, don't block startup if migrations fail (DB might not be ready)
-        if (process.env.NODE_ENV === 'production') {
-          throw migrationError;
-        }
+        // Don't block startup if migrations fail - DB might not be ready yet
         logger.warn({ error: migrationError }, 'Migrations failed - server will start anyway');
       }
     }
 
     app.listen(PORT, '0.0.0.0', () => {
       logger.info(`Backend listening on http://0.0.0.0:${PORT}`);
+      logger.info(`DATABASE_URL configured: ${process.env.DATABASE_URL ? 'YES' : 'NO'}`);
+      logger.info(`REDIS_URL configured: ${process.env.REDIS_URL ? 'YES' : 'NO'}`);
     });
   } catch (error) {
     logger.error(error, 'Failed to start server');
