@@ -43,16 +43,19 @@ router.get('/', async (_req: Request, res: Response) => {
     redisOk = false;
   }
 
-  // ISCE3 check - verify installation and accessibility in WSL
-  let isceOk = false;
-  try {
-    const result = await isceService.checkInstallation();
-    isceOk = result.installed;
-  } catch {
-    isceOk = false;
+  // ISCE3 check - SKIP in production (ISCE3 runs on RunPod Serverless, not on Railway)
+  let isceOk = true; // Always true - ISCE3 is on RunPod
+  if (process.env.NODE_ENV !== 'production' && process.env.CHECK_ISCE === 'true') {
+    try {
+      const result = await isceService.checkInstallation();
+      isceOk = result.installed;
+    } catch {
+      isceOk = false;
+    }
   }
 
-  const ok = dbOk && redisOk && isceOk;
+  // In production, only check DB and Redis
+  const ok = dbOk && redisOk;
 
   res.status(ok ? 200 : 503).json({
     ok,
