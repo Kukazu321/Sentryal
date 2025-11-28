@@ -258,7 +258,7 @@ export default function OnboardingPage() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Not authenticated');
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/estimate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/estimate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -305,7 +305,7 @@ export default function OnboardingPage() {
       if (!token) throw new Error('Not authenticated');
 
       // Create infrastructure from bbox
-      const infraRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`, {
+      const infraRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -324,7 +324,7 @@ export default function OnboardingPage() {
       const infra = await infraRes.json();
 
       // Generate grid by ADDRESS mode
-      const genRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/generate-grid`, {
+      const genRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/generate-grid`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -343,7 +343,7 @@ export default function OnboardingPage() {
 
       // Auto-start sample job then redirect
       try {
-        const jobRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/process-insar`, {
+        const jobRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/process-insar`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ infrastructureId: infra.id }),
@@ -376,7 +376,7 @@ export default function OnboardingPage() {
       form.append('shapefile', shpFile);
       form.append('name', infrastructureName);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/generate-grid-shp`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/generate-grid-shp`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: form,
@@ -390,7 +390,7 @@ export default function OnboardingPage() {
       const infraId = data.infrastructureId as string;
 
       try {
-        const jobRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/process-insar`, {
+        const jobRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/process-insar`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ infrastructureId: infraId }),
@@ -455,7 +455,7 @@ export default function OnboardingPage() {
           ],
         ][0];
 
-      const response = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/estimate`, {
+      const response = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/estimate`, {
         method: 'POST',
         body: JSON.stringify({
           mode: 'DRAW',
@@ -498,7 +498,7 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      const response = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`, {
+      const response = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`, {
         method: 'POST',
         body: JSON.stringify({
           name: infrastructureName,
@@ -578,7 +578,7 @@ export default function OnboardingPage() {
         setGenerationProgress((prev) => Math.min(prev + Math.random() * 30, 90));
       }, 500);
 
-      const response = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/generate-grid`, {
+      const response = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/onboarding/generate-grid`, {
         method: 'POST',
         body: JSON.stringify({
           infrastructureId: infraId,
