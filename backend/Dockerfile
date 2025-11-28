@@ -21,8 +21,8 @@ RUN npm run build
 # Remove dev dependencies after build
 RUN npm prune --production
 
-# Expose port
+# Expose port (Railway injects PORT env var)
 EXPOSE 3001
 
-# Start server
-CMD ["node", "dist/index.js"]
+# Start server with npm for better error handling
+CMD ["npm", "run", "start:prod"]

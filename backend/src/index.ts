@@ -3,10 +3,10 @@ import { config } from './config';
 import { runMigrations } from './db/migrate';
 import logger from './utils/logger';
 
-// Import worker to start it (BullMQ worker auto-starts on import)
-import './workers/insarWorker';
+// Don't import worker in main process - let it run separately if needed
+// import './workers/insarWorker';
 
-const PORT = Number(config.port || 5000);
+const PORT = Number(process.env.PORT || config.port || 3001);
 
 async function startServer() {
   try {
