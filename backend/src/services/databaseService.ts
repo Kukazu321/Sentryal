@@ -24,19 +24,19 @@ export class DatabaseService {
             await prisma.$executeRaw`
         UPDATE infrastructures 
         SET name = ${data.name}, type = ${data.type}, updated_at = NOW() 
-        WHERE id = ${infrastructureId}::uuid
+        WHERE id = ${infrastructureId}
       `;
         } else if (data.name !== undefined) {
             await prisma.$executeRaw`
         UPDATE infrastructures 
         SET name = ${data.name}, updated_at = NOW() 
-        WHERE id = ${infrastructureId}::uuid
+        WHERE id = ${infrastructureId}
       `;
         } else if (data.type !== undefined) {
             await prisma.$executeRaw`
         UPDATE infrastructures 
         SET type = ${data.type}, updated_at = NOW() 
-        WHERE id = ${infrastructureId}::uuid
+        WHERE id = ${infrastructureId}
       `;
         }
 
@@ -51,7 +51,7 @@ export class DatabaseService {
         }>>\`
       SELECT id, user_id, name, type, geom, created_at, updated_at
       FROM infrastructures
-      WHERE id = ${infrastructureId}::uuid
+      WHERE id = ${infrastructureId}
     `;
 
         const rec = rows[0];
@@ -70,31 +70,31 @@ export class DatabaseService {
             // 1) Deformations for points of infra
             await prisma.$executeRaw`
         DELETE FROM deformations
-        WHERE point_id IN (SELECT id FROM points WHERE infrastructure_id = ${infrastructureId}::uuid)
+        WHERE point_id IN (SELECT id FROM points WHERE infrastructure_id = ${infrastructureId})
       `;
             logger.info({}, '[INFRA-DELETE] Deleted deformations');
 
             // 2) Points
             await prisma.$executeRaw`
-        DELETE FROM points WHERE infrastructure_id = ${infrastructureId}::uuid
+        DELETE FROM points WHERE infrastructure_id = ${infrastructureId}
       `;
             logger.info({}, '[INFRA-DELETE] Deleted points');
 
             // 3) Jobs
             await prisma.$executeRaw`
-        DELETE FROM jobs WHERE infrastructure_id = ${infrastructureId}::uuid
+        DELETE FROM jobs WHERE infrastructure_id = ${infrastructureId}
       `;
             logger.info({}, '[INFRA-DELETE] Deleted jobs');
 
             // 4) Members
             await prisma.$executeRaw`
-        DELETE FROM infrastructure_members WHERE infrastructure_id = ${infrastructureId}::uuid
+        DELETE FROM infrastructure_members WHERE infrastructure_id = ${infrastructureId}
       `;
             logger.info({}, '[INFRA-DELETE] Deleted members');
 
             // 5) Infrastructure
             await prisma.$executeRaw`
-        DELETE FROM infrastructures WHERE id = ${infrastructureId}::uuid
+        DELETE FROM infrastructures WHERE id = ${infrastructureId}
       `;
             logger.info({ infrastructureId }, '[INFRA-DELETE] Infrastructure deleted');
 
@@ -183,10 +183,10 @@ export class DatabaseService {
         }>>\`
       SELECT i.id, i.user_id, i.name, i.type, i.geom, i.created_at, i.updated_at
       FROM infrastructures i
-      WHERE i.user_id = ${userId}::uuid
+      WHERE i.user_id = ${userId}
          OR EXISTS (
            SELECT 1 FROM infrastructure_members m
-           WHERE m.infrastructure_id = i.id AND m.user_id = ${userId}::uuid
+           WHERE m.infrastructure_id = i.id AND m.user_id = ${userId}
          )
       ORDER BY i.created_at DESC
     `;
@@ -219,8 +219,8 @@ export class DatabaseService {
             await prisma.$executeRaw`
         INSERT INTO infrastructures (id, user_id, name, type, geom, created_at, updated_at)
         VALUES (
-          ${id}::uuid,
-          ${userId}::uuid,
+          ${id},
+          ${userId},
           ${data.name},
           ${type},
           ${bboxJSON},
@@ -246,7 +246,7 @@ export class DatabaseService {
         }>>`
       SELECT id, user_id, name, type, geom, created_at, updated_at
       FROM infrastructures
-      WHERE id = ${id}::uuid
+      WHERE id = ${id}
     `;
 
         if (!result[0]) {
@@ -265,7 +265,7 @@ export class DatabaseService {
         try {
             await prisma.$executeRaw`
         INSERT INTO infrastructure_members (user_id, infrastructure_id, role)
-        VALUES (${userId}::uuid, ${created.id}::uuid, 'OWNER')
+        VALUES (${userId}, ${created.id}, 'OWNER')
         ON CONFLICT (user_id, infrastructure_id) DO NOTHING
       `;
             logger.info({ userId, infraId: created.id }, '[INFRA-CREATE] OWNER membership created');
@@ -317,7 +317,7 @@ export class DatabaseService {
         const values = points
             .map((point) => {
                 const geoJSON = JSON.stringify({ type: 'Point', coordinates: [point.lng, point.lat] });
-                return `(gen_random_uuid(), '${infrastructureId}'::uuid, '${geoJSON}')`;
+                return `(gen_random_uuid(), '${infrastructureId}', '${geoJSON}')`;
             })
             .join(', ');
 
@@ -357,7 +357,7 @@ export class DatabaseService {
         }>>`
       SELECT id, infrastructure_id, geom, soil_type, created_at
       FROM points
-      WHERE infrastructure_id = ${infrastructureId}::uuid
+      WHERE infrastructure_id = ${infrastructureId}
       ORDER BY created_at DESC
     `;
 
@@ -429,7 +429,7 @@ export class DatabaseService {
         const result = await prisma.$queryRaw<Array<{ geom: string }>>`
       SELECT geom
       FROM points
-      WHERE infrastructure_id = ${infrastructureId}::uuid
+      WHERE infrastructure_id = ${infrastructureId}
     `;
 
         if (!result || result.length === 0) {
@@ -487,7 +487,7 @@ export class DatabaseService {
              bbox, hy3_product_urls, error_message,
              retry_count, processing_time_ms, created_at, completed_at
       FROM jobs
-      WHERE infrastructure_id = ${infrastructureId}::uuid
+      WHERE infrastructure_id = ${infrastructureId}
       ORDER BY created_at DESC
     `;
 
@@ -525,8 +525,8 @@ export class DatabaseService {
             await prisma.$executeRaw`
           INSERT INTO jobs (id, infrastructure_id, hy3_job_id, hy3_job_type, status, bbox, created_at)
           VALUES (
-            ${id}::uuid,
-            ${infrastructureId}::uuid,
+            ${id},
+            ${infrastructureId},
             ${hy3JobId},
             ${hy3JobType},
             ${data.status},
@@ -563,7 +563,7 @@ export class DatabaseService {
              bbox, hy3_product_urls, error_message, 
              retry_count, processing_time_ms, created_at, completed_at
       FROM jobs
-      WHERE id = ${id}::uuid
+      WHERE id = ${id}
     `;
 
         if (!result[0]) {
