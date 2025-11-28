@@ -264,8 +264,8 @@ export class DatabaseService {
         // Ensure owner membership
         try {
             await prisma.$executeRaw`
-        INSERT INTO infrastructure_members (user_id, infrastructure_id, role)
-        VALUES (${userId}, ${created.id}, 'OWNER')
+        INSERT INTO infrastructure_members (id, user_id, infrastructure_id, role, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${userId}, ${created.id}, 'OWNER'::"InfraRole", NOW(), NOW())
         ON CONFLICT (user_id, infrastructure_id) DO NOTHING
       `;
             logger.info({ userId, infraId: created.id }, '[INFRA-CREATE] OWNER membership created');
