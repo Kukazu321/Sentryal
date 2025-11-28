@@ -45,19 +45,19 @@ export class DatabaseService {
             user_id: string;
             name: string;
             type: string | null;
-            bbox: string;
+            geom: string | null;
             mode_onboarding: string | null;
             created_at: Date;
             updated_at: Date;
         }>>`
-      SELECT id, user_id, name, type, ST_AsText(bbox) as bbox, mode_onboarding, created_at, updated_at
+      SELECT id, user_id, name, type, geom, mode_onboarding, created_at, updated_at
       FROM infrastructures
       WHERE id = ${infrastructureId}::uuid
     `;
 
         const rec = rows[0];
         if (!rec) throw new Error('Infrastructure not found after update');
-        return { ...rec, bbox: this.wktToGeoJSONPolygon(rec.bbox) };
+        return { ...rec, bbox: rec.geom ? JSON.parse(rec.geom) : null };
     }
 
     /**
@@ -178,12 +178,12 @@ export class DatabaseService {
             user_id: string;
             name: string;
             type: string | null;
-            bbox: string;
+            geom: string | null;
             mode_onboarding: string | null;
             created_at: Date;
             updated_at: Date;
         }>>`
-      SELECT i.id, i.user_id, i.name, i.type, ST_AsText(i.bbox) as bbox, i.mode_onboarding, i.created_at, i.updated_at
+      SELECT i.id, i.user_id, i.name, i.type, i.geom, i.mode_onboarding, i.created_at, i.updated_at
       FROM infrastructures i
       WHERE i.user_id = ${userId}::uuid
          OR EXISTS (
@@ -195,7 +195,7 @@ export class DatabaseService {
 
         return infrastructures.map((infra) => ({
             ...infra,
-            bbox: this.wktToGeoJSONPolygon(infra.bbox),
+            bbox: infra.geom ? JSON.parse(infra.geom) : null,
         }));
     }
 
@@ -211,7 +211,7 @@ export class DatabaseService {
             mode_onboarding?: 'ADDRESS' | 'DRAW' | 'SHP';
         }
     ) {
-        const bboxWKT = this.geoJSONPolygonToWKT(data.bbox);
+        const bboxJSON = JSON.stringify(data.bbox);
         const id = randomUUID();
         const modeOnboarding = data.mode_onboarding || null;
         const type = data.type || null;
@@ -220,14 +220,14 @@ export class DatabaseService {
 
         try {
             await prisma.$executeRaw`
-        INSERT INTO infrastructures (id, user_id, name, type, bbox, mode_onboarding, created_at, updated_at)
+        INSERT INTO infrastructures (id, user_id, name, type, geom, mode_onboarding, created_at, updated_at)
         VALUES (
           ${id}::uuid,
           ${userId}::uuid,
           ${data.name},
           ${type},
-          ST_GeomFromText(${bboxWKT}, 4326),
-          ${modeOnboarding},
+          ${bboxJSON},
+          ${modeOnboarding}::text::"OnboardingMode",
           NOW(),
           NOW()
         )
@@ -244,12 +244,12 @@ export class DatabaseService {
             user_id: string;
             name: string;
             type: string | null;
-            bbox: string;
+            geom: string | null;
             mode_onboarding: string | null;
             created_at: Date;
             updated_at: Date;
         }>>`
-      SELECT id, user_id, name, type, ST_AsText(bbox) as bbox, mode_onboarding, created_at, updated_at
+      SELECT id, user_id, name, type, geom, mode_onboarding, created_at, updated_at
       FROM infrastructures
       WHERE id = ${id}::uuid
     `;
@@ -261,7 +261,7 @@ export class DatabaseService {
 
         const created = {
             ...result[0],
-            bbox: this.wktToGeoJSONPolygon(result[0].bbox),
+            bbox: result[0].geom ? JSON.parse(result[0].geom) : null,
         };
 
         logger.info({ id, name: created.name }, '[INFRA-CREATE] Creating OWNER membership');
@@ -318,15 +318,18 @@ export class DatabaseService {
             }
         }
 
-        // Build VALUES clause - coordinates are validated numbers
+        // Build VALUES clause - store as GeoJSON text
         const values = points
-            .map((point) => `(gen_random_uuid(), '${infrastructureId}'::uuid, ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326))`)
+            .map((point) => {
+                const geoJSON = JSON.stringify({ type: 'Point', coordinates: [point.lng, point.lat] });
+                return `(gen_random_uuid(), '${infrastructureId}'::uuid, '${geoJSON}')`;
+            })
             .join(', ');
 
         const query = Prisma.sql`
       INSERT INTO points (id, infrastructure_id, geom)
       VALUES ${Prisma.raw(values)}
-      RETURNING id, infrastructure_id, ST_AsText(geom) as geom, soil_type, created_at
+      RETURNING id, infrastructure_id, geom, soil_type, created_at
     `;
 
         const result = await prisma.$queryRaw<Array<{
@@ -340,7 +343,7 @@ export class DatabaseService {
         return result.map((row) => ({
             id: row.id,
             infrastructure_id: row.infrastructure_id,
-            geom: this.wktToGeoJSONPoint(row.geom),
+            geom: row.geom ? JSON.parse(row.geom) : null,
             soil_type: row.soil_type,
             created_at: row.created_at,
         }));
@@ -357,7 +360,7 @@ export class DatabaseService {
             soil_type: string | null;
             created_at: Date;
         }>>`
-      SELECT id, infrastructure_id, ST_AsText(geom) as geom, soil_type, created_at
+      SELECT id, infrastructure_id, geom, soil_type, created_at
       FROM points
       WHERE infrastructure_id = ${infrastructureId}::uuid
       ORDER BY created_at DESC
@@ -367,10 +370,10 @@ export class DatabaseService {
             try {
                 return {
                     ...p,
-                    geom: this.wktToGeoJSONPoint(p.geom),
+                    geom: p.geom ? JSON.parse(p.geom) : null,
                 };
             } catch (error) {
-                logger.error({ geom: p.geom, error }, 'Failed to convert WKT to GeoJSON');
+                logger.error({ geom: p.geom, error }, 'Failed to parse GeoJSON');
                 return {
                     ...p,
                     geom: p.geom as any,
@@ -381,9 +384,17 @@ export class DatabaseService {
 
     /**
      * Get points within a bounding box
+     * Note: Without PostGIS, we do simple in-memory filtering
      */
     async getPointsInBbox(bbox: { type: 'Polygon'; coordinates: number[][][] }) {
-        const bboxWKT = this.geoJSONPolygonToWKT(bbox);
+        // Extract bbox bounds from polygon coordinates
+        const coords = bbox.coordinates[0];
+        const lngs = coords.map(c => c[0]);
+        const lats = coords.map(c => c[1]);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
 
         const result = await prisma.$queryRaw<Array<{
             id: string;
@@ -392,38 +403,71 @@ export class DatabaseService {
             soil_type: string | null;
             created_at: Date;
         }>>`
-      SELECT id, infrastructure_id, ST_AsText(geom) as geom, soil_type, created_at
+      SELECT id, infrastructure_id, geom, soil_type, created_at
       FROM points
-      WHERE ST_Within(geom, ST_GeomFromText(${bboxWKT}, 4326))
     `;
 
-        return result.map((row) => ({
-            id: row.id,
-            infrastructure_id: row.infrastructure_id,
-            geom: this.wktToGeoJSONPoint(row.geom),
-            soil_type: row.soil_type,
-            created_at: row.created_at,
-        }));
+        // Filter in memory
+        return result
+            .map((row) => ({
+                id: row.id,
+                infrastructure_id: row.infrastructure_id,
+                geom: row.geom ? JSON.parse(row.geom) : null,
+                soil_type: row.soil_type,
+                created_at: row.created_at,
+            }))
+            .filter((row) => {
+                if (!row.geom || row.geom.type !== 'Point') return false;
+                const [lng, lat] = row.geom.coordinates;
+                return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
+            });
     }
 
     /**
      * Calculate aggregated bounding box from points
+     * Note: Without PostGIS, we compute in JavaScript
      */
     async getAggregatedBbox(infrastructureId: string): Promise<{
         type: 'Polygon';
         coordinates: number[][][];
     }> {
-        const result = await prisma.$queryRaw<Array<{ bbox: string }>>`
-      SELECT ST_AsText(ST_Envelope(ST_Collect(geom))) as bbox
+        const result = await prisma.$queryRaw<Array<{ geom: string }>>`
+      SELECT geom
       FROM points
       WHERE infrastructure_id = ${infrastructureId}::uuid
     `;
 
-        if (!result[0]?.bbox) {
+        if (!result || result.length === 0) {
             throw new Error('No points found for infrastructure');
         }
 
-        return this.wktToGeoJSONPolygon(result[0].bbox);
+        // Parse all points and compute bounding box
+        const points = result
+            .filter(r => r.geom)
+            .map(r => JSON.parse(r.geom))
+            .filter(g => g.type === 'Point');
+
+        if (points.length === 0) {
+            throw new Error('No valid points found for infrastructure');
+        }
+
+        const lngs = points.map(p => p.coordinates[0]);
+        const lats = points.map(p => p.coordinates[1]);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+
+        return {
+            type: 'Polygon',
+            coordinates: [[
+                [minLng, minLat],
+                [maxLng, minLat],
+                [maxLng, maxLat],
+                [minLng, maxLat],
+                [minLng, minLat],
+            ]],
+        };
     }
 
     /**
@@ -445,7 +489,7 @@ export class DatabaseService {
             completed_at: Date | null;
         }>>`
       SELECT id, infrastructure_id, hy3_job_id, hy3_job_type, status,
-             ST_AsText(bbox) as bbox, hy3_product_urls, error_message,
+             bbox, hy3_product_urls, error_message,
              retry_count, processing_time_ms, created_at, completed_at
       FROM jobs
       WHERE infrastructure_id = ${infrastructureId}::uuid
@@ -454,7 +498,7 @@ export class DatabaseService {
 
         return jobs.map((job) => ({
             ...job,
-            bbox: job.bbox ? this.wktToGeoJSONPolygon(job.bbox) : null,
+            bbox: job.bbox ? JSON.parse(job.bbox) : null,
         }));
     }
 
@@ -473,6 +517,7 @@ export class DatabaseService {
         const id = randomUUID();
         const hy3JobId = data.hy3_job_id || null;
         const hy3JobType = data.hy3_job_type || null;
+        const bboxJSON = data.bbox ? JSON.stringify(data.bbox) : null;
 
         logger.info({
             jobId: id,
@@ -482,9 +527,7 @@ export class DatabaseService {
         }, 'Creating job in database');
 
         try {
-            if (data.bbox) {
-                const bboxWKT = this.geoJSONPolygonToWKT(data.bbox);
-                await prisma.$executeRaw`
+            await prisma.$executeRaw`
           INSERT INTO jobs (id, infrastructure_id, hy3_job_id, hy3_job_type, status, bbox, created_at)
           VALUES (
             ${id}::uuid,
@@ -492,24 +535,10 @@ export class DatabaseService {
             ${hy3JobId},
             ${hy3JobType},
             ${data.status},
-            ST_GeomFromText(${bboxWKT}, 4326),
+            ${bboxJSON},
             NOW()
           )
         `;
-            } else {
-                await prisma.$executeRaw`
-          INSERT INTO jobs (id, infrastructure_id, hy3_job_id, hy3_job_type, status, bbox, created_at)
-          VALUES (
-            ${id}::uuid,
-            ${infrastructureId}::uuid,
-            ${hy3JobId},
-            ${hy3JobType},
-            ${data.status},
-            NULL,
-            NOW()
-          )
-        `;
-            }
             logger.info({ jobId: id }, 'Job INSERT completed');
         } catch (error) {
             logger.error({
@@ -536,7 +565,7 @@ export class DatabaseService {
             completed_at: Date | null;
         }>>`
       SELECT id, infrastructure_id, hy3_job_id, hy3_job_type, status, 
-             ST_AsText(bbox) as bbox, hy3_product_urls, error_message, 
+             bbox, hy3_product_urls, error_message, 
              retry_count, processing_time_ms, created_at, completed_at
       FROM jobs
       WHERE id = ${id}::uuid
@@ -548,7 +577,7 @@ export class DatabaseService {
 
         return {
             ...result[0],
-            bbox: result[0].bbox ? this.wktToGeoJSONPolygon(result[0].bbox) : null,
+            bbox: result[0].bbox ? JSON.parse(result[0].bbox) : null,
         };
     }
 
