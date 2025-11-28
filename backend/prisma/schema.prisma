@@ -47,7 +47,7 @@ model Infrastructure {
   user_id         String
   name            String   @db.VarChar(255)
   type            String?  @db.VarChar(100)
-  geom            Unsupported("geometry(Polygon, 4326)")
+  geom            String?  @db.Text // GeoJSON stored as text (PostGIS not available on Railway)
   created_at      DateTime       @default(now())
   updated_at      DateTime       @updatedAt
 
