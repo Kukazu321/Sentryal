@@ -1,9 +1,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import createFakeSupabase from './fakeSupabase';
 
-const useFake = process.env.NEXT_PUBLIC_USE_FAKE_AUTH === 'true';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Use fake auth if explicitly set OR if Supabase env vars are missing
+const useFake = process.env.NEXT_PUBLIC_USE_FAKE_AUTH === 'true' || !url || !anonKey;
 
 let client: unknown;
 let supabase: SupabaseClient | unknown;
@@ -41,12 +43,11 @@ const safeStorage = (() => {
 if (useFake) {
     client = createFakeSupabase();
     supabase = client as unknown;
-} else {
-    if (!url || !anonKey) {
-        // eslint-disable-next-line no-console
-        console.warn('Supabase environment variables are not set. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    if (typeof window !== 'undefined') {
+        console.log('Using fake Supabase client (no env vars or NEXT_PUBLIC_USE_FAKE_AUTH=true)');
     }
-    client = createClient(url ?? '', anonKey ?? '', {
+} else {
+    client = createClient(url!, anonKey!, {
         auth: {
             persistSession: true,
             autoRefreshToken: true,
