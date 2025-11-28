@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase as imported } from '../../../../lib/supabaseClient';
 
 const supabase: any = imported as any;
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
     const router = useRouter();
     const params = useSearchParams();
     const [error, setError] = useState<string | null>(null);
@@ -66,5 +66,13 @@ export default function AuthCallback() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function AuthCallback() {
+    return (
+        <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
+            <AuthCallbackInner />
+        </Suspense>
     );
 }

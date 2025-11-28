@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase as imported } from '../../../../lib/supabaseClient';
 
 const supabase: any = imported as any;
 
-export default function CheckEmail() {
+function CheckEmailInner() {
     const router = useRouter();
     const params = useSearchParams();
     const emailParam = params?.get('email') || '';
@@ -56,5 +56,13 @@ export default function CheckEmail() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function CheckEmail() {
+    return (
+        <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
+            <CheckEmailInner />
+        </Suspense>
     );
 }

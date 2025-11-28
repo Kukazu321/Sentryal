@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '../../../../context/AuthProvider';
 import localFont from 'next/font/local';
 
 const neueLight = localFont({ src: '../../../../public/fonts/NeueHaasDisplayLight.ttf', display: 'swap' });
 
-export default function Signup() {
+function SignupInner() {
     const { signUp, user, loading } = useAuthContext();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -254,5 +254,13 @@ export default function Signup() {
                 />
             </div>
         </div>
+    );
+}
+
+export default function Signup() {
+    return (
+        <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
+            <SignupInner />
+        </Suspense>
     );
 }
