@@ -32,7 +32,7 @@ async function getUserInfraRole(userId: string, infrastructureId: string): Promi
     const rows = await prisma.$queryRaw<Array<{ role: string }>>`
       SELECT role::text as role
       FROM infrastructure_members
-      WHERE user_id = ${userId}::uuid AND infrastructure_id = ${infrastructureId}::uuid
+      WHERE user_id = ${userId} AND infrastructure_id = ${infrastructureId}
       LIMIT 1
     `;
     if (rows[0]?.role) {
@@ -41,7 +41,7 @@ async function getUserInfraRole(userId: string, infrastructureId: string): Promi
 
     // Fallback: owner via infrastructures.user_id
     const owned = await prisma.$queryRaw<Array<{ id: string }>>`
-      SELECT id FROM infrastructures WHERE id = ${infrastructureId}::uuid AND user_id = ${userId}::uuid LIMIT 1
+      SELECT id FROM infrastructures WHERE id = ${infrastructureId} AND user_id = ${userId} LIMIT 1
     `;
     if (owned[0]?.id) return 'OWNER';
 
@@ -137,8 +137,8 @@ export function requireInfraRole(
 export async function ensureOwnerMembership(userId: string, infrastructureId: string) {
   try {
     await prisma.$executeRaw`
-      INSERT INTO infrastructure_members (user_id, infrastructure_id, role)
-      VALUES (${userId}::uuid, ${infrastructureId}::uuid, 'OWNER')
+      INSERT INTO infrastructure_members (id, user_id, infrastructure_id, role, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${userId}, ${infrastructureId}, 'OWNER'::"InfraRole", NOW(), NOW())
       ON CONFLICT (user_id, infrastructure_id) DO NOTHING;
     `;
   } catch (error) {
