@@ -48,6 +48,7 @@ model Infrastructure {
   name            String   @db.VarChar(255)
   type            String?  @db.VarChar(100)
   geom            String?  @db.Text // GeoJSON stored as text (PostGIS not available on Railway)
+  mode_onboarding OnboardingMode?
   created_at      DateTime       @default(now())
   updated_at      DateTime       @updatedAt
 
