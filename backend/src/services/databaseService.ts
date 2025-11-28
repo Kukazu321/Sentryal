@@ -172,6 +172,8 @@ export class DatabaseService {
      * Get all infrastructures for a user
      */
     async getUserInfrastructures(userId: string) {
+        logger.info({ userId }, '[INFRA-GET] Fetching infrastructures for user');
+
         const infrastructures = await prisma.$queryRaw<Array<{
             id: string;
             user_id: string;
@@ -180,7 +182,7 @@ export class DatabaseService {
             geom: string | null;
             created_at: Date;
             updated_at: Date;
-        }>>\`
+        }>>`
       SELECT i.id, i.user_id, i.name, i.type, i.geom, i.created_at, i.updated_at
       FROM infrastructures i
       WHERE i.user_id = ${userId}
@@ -191,10 +193,22 @@ export class DatabaseService {
       ORDER BY i.created_at DESC
     `;
 
-        return infrastructures.map((infra) => ({
-            ...infra,
-            bbox: infra.geom ? JSON.parse(infra.geom) : null,
-        }));
+        logger.info({ count: infrastructures.length }, '[INFRA-GET] Found infrastructures');
+
+        return infrastructures.map((infra) => {
+            let bbox = null;
+            if (infra.geom) {
+                try {
+                    bbox = JSON.parse(infra.geom);
+                } catch (e) {
+                    logger.warn({ geom: infra.geom, error: e }, '[INFRA-GET] Failed to parse geom');
+                }
+            }
+            return {
+                ...infra,
+                bbox,
+            };
+        });
     }
 
     /**
