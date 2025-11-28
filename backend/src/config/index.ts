@@ -1,6 +1,23 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Parse REDIS_URL if provided
+function parseRedisUrl(url?: string) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port) || 6379,
+      password: parsed.password || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const redisFromUrl = parseRedisUrl(process.env.REDIS_URL);
+
 interface Config {
   nodeEnv: string;
   port: string;
@@ -31,9 +48,9 @@ export const config: Config = {
     anonKey: process.env.SUPABASE_ANON_KEY || '',
   },
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD || undefined,
+    host: redisFromUrl?.host || process.env.REDIS_HOST || 'localhost',
+    port: redisFromUrl?.port || parseInt(process.env.REDIS_PORT || '6379'),
+    password: redisFromUrl?.password || process.env.REDIS_PASSWORD || undefined,
   },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   earthdata: {
