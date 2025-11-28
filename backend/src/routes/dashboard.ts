@@ -30,11 +30,27 @@ import { config } from '../config';
 
 const router = Router();
 
+// Parse REDIS_URL if provided
+function parseRedisUrl(url?: string) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port) || 6379,
+      password: parsed.password || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+const redisFromUrl = parseRedisUrl(process.env.REDIS_URL);
+
 // Redis client for caching
 const redis = new Redis({
-  host: (config as any).redis?.host || process.env.REDIS_HOST || 'localhost',
-  port: (config as any).redis?.port || parseInt(process.env.REDIS_PORT || '6379'),
-  password: (config as any).redis?.password || process.env.REDIS_PASSWORD || undefined,
+  host: redisFromUrl?.host || (config as any).redis?.host || process.env.REDIS_HOST || 'localhost',
+  port: redisFromUrl?.port || (config as any).redis?.port || parseInt(process.env.REDIS_PORT || '6379'),
+  password: redisFromUrl?.password || (config as any).redis?.password || process.env.REDIS_PASSWORD || undefined,
   maxRetriesPerRequest: 3,
   retryStrategy: (times) => Math.min(times * 50, 2000),
 });

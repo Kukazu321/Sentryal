@@ -40,7 +40,7 @@ chmod +x build_push_docker.sh
 1. Aller sur https://www.runpod.io/console/serverless
 2. Créer un nouvel endpoint avec:
    - **Docker Image**: `sentryal/isce3-serverless:latest`
-   - **GPU**: RTX 4090 (24GB)
+   - **GPU**: RTX 4090 (2G4B)
    - **Active Workers**: 0
    - **Max Workers**: 3
    - **Idle Timeout**: 5 min
