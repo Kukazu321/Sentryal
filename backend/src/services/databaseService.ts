@@ -174,41 +174,43 @@ export class DatabaseService {
     async getUserInfrastructures(userId: string) {
         logger.info({ userId }, '[INFRA-GET] Fetching infrastructures for user');
 
-        const infrastructures = await prisma.$queryRaw<Array<{
-            id: string;
-            user_id: string;
-            name: string;
-            type: string | null;
-            geom: string | null;
-            created_at: Date;
-            updated_at: Date;
-        }>>`
-      SELECT i.id, i.user_id, i.name, i.type, i.geom, i.created_at, i.updated_at
-      FROM infrastructures i
-      WHERE i.user_id = ${userId}
-         OR EXISTS (
-           SELECT 1 FROM infrastructure_members m
-           WHERE m.infrastructure_id = i.id AND m.user_id = ${userId}
-         )
-      ORDER BY i.created_at DESC
-    `;
+        try {
+            // Simple query - just get by user_id first
+            const infrastructures = await prisma.$queryRaw<Array<{
+                id: string;
+                user_id: string;
+                name: string;
+                type: string | null;
+                geom: string | null;
+                created_at: Date;
+                updated_at: Date;
+            }>>`
+              SELECT id, user_id, name, type, geom, created_at, updated_at
+              FROM infrastructures
+              WHERE user_id = ${userId}
+              ORDER BY created_at DESC
+            `;
 
-        logger.info({ count: infrastructures.length }, '[INFRA-GET] Found infrastructures');
+            logger.info({ count: infrastructures.length }, '[INFRA-GET] Found infrastructures');
 
-        return infrastructures.map((infra) => {
-            let bbox = null;
-            if (infra.geom) {
-                try {
-                    bbox = JSON.parse(infra.geom);
-                } catch (e) {
-                    logger.warn({ geom: infra.geom, error: e }, '[INFRA-GET] Failed to parse geom');
+            return infrastructures.map((infra) => {
+                let bbox = null;
+                if (infra.geom) {
+                    try {
+                        bbox = JSON.parse(infra.geom);
+                    } catch (e) {
+                        logger.warn({ geom: infra.geom, error: e }, '[INFRA-GET] Failed to parse geom');
+                    }
                 }
-            }
-            return {
-                ...infra,
-                bbox,
-            };
-        });
+                return {
+                    ...infra,
+                    bbox,
+                };
+            });
+        } catch (error) {
+            logger.error({ error, userId }, '[INFRA-GET] Query failed');
+            throw error;
+        }
     }
 
     /**
