@@ -65,7 +65,7 @@ export function useInfrastructureStats(): UseQueryResult<InfrastructureStats[], 
     queryKey: ['infrastructureStats'],
     queryFn: async () => {
       // Fetch all infrastructures
-      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
       if (!infraRes.ok) throw new Error('Failed to fetch infrastructures');
       const infraData = await infraRes.json();
       const infrastructures = infraData.infrastructures || [];
@@ -73,7 +73,7 @@ export function useInfrastructureStats(): UseQueryResult<InfrastructureStats[], 
       // Fetch map data for each to get real stats
       const statsPromises = infrastructures.map(async (infra: any) => {
         try {
-          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infra.id}/map-data?limit=1`);
+          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infra.id}/map-data?limit=1`);
           if (mapRes.ok) {
             const mapData = await mapRes.json();
             

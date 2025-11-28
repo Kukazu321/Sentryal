@@ -108,7 +108,7 @@ export function useGlobalStats(): UseQueryResult<GlobalStats, Error> {
     queryKey: ['globalStats'],
     queryFn: async () => {
       // Fetch all infrastructures
-      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
       if (!infraRes.ok) throw new Error('Failed to fetch infrastructures');
       const infraData = await infraRes.json();
       const infrastructures = infraData.infrastructures || [];
@@ -117,7 +117,7 @@ export function useGlobalStats(): UseQueryResult<GlobalStats, Error> {
       const allJobs: Job[] = [];
       for (const infra of infrastructures) {
         try {
-          const jobsRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs?infrastructureId=${infra.id}`);
+          const jobsRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs?infrastructureId=${infra.id}`);
           if (jobsRes.ok) {
             const jobsData = await jobsRes.json();
             allJobs.push(...(jobsData.jobs || []));
@@ -144,7 +144,7 @@ export function useGlobalStats(): UseQueryResult<GlobalStats, Error> {
 
       for (const infra of infrastructures) {
         try {
-          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infra.id}/map-data?limit=10000`);
+          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infra.id}/map-data?limit=10000`);
           if (mapRes.ok) {
             const mapData = await mapRes.json();
             totalPoints += mapData.metadata?.totalPoints || 0;
@@ -211,7 +211,7 @@ export function useGlobalTimeSeries(): UseQueryResult<GlobalTimeSeries, Error> {
     queryKey: ['globalTimeSeries'],
     queryFn: async () => {
       // Fetch all infrastructures
-      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
       if (!infraRes.ok) throw new Error('Failed to fetch infrastructures');
       const infraData = await infraRes.json();
       const infrastructures = infraData.infrastructures || [];
@@ -224,7 +224,7 @@ export function useGlobalTimeSeries(): UseQueryResult<GlobalTimeSeries, Error> {
 
       for (const infra of infrastructures) {
         try {
-          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infra.id}/map-data?limit=10000`);
+          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infra.id}/map-data?limit=10000`);
           if (mapRes.ok) {
             const mapData = await mapRes.json();
             const features = mapData.features || [];
@@ -290,7 +290,7 @@ export function useCriticalInfrastructures(): UseQueryResult<CriticalInfrastruct
   return useQuery({
     queryKey: ['criticalInfrastructures'],
     queryFn: async () => {
-      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+      const infraRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
       if (!infraRes.ok) throw new Error('Failed to fetch infrastructures');
       const infraData = await infraRes.json();
       const infrastructures = infraData.infrastructures || [];
@@ -299,7 +299,7 @@ export function useCriticalInfrastructures(): UseQueryResult<CriticalInfrastruct
 
       for (const infra of infrastructures) {
         try {
-          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infra.id}/map-data?limit=10000`);
+          const mapRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infra.id}/map-data?limit=10000`);
           if (mapRes.ok) {
             const mapData = await mapRes.json();
             const stats = mapData.metadata?.statistics;

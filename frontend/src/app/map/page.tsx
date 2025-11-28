@@ -25,7 +25,7 @@ export default function MapPage() {
             try {
                 setError(null);
                 const token = await getAccessToken();
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
                 if (!res.ok) throw new Error(`Failed to load infrastructures (${res.status})`);
@@ -54,7 +54,7 @@ export default function MapPage() {
                 setError(null);
                 setSelectedPoint(null);
                 const token = await getAccessToken();
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${selectedInfraId}/map-data`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${selectedInfraId}/map-data`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
                 if (!res.ok) throw new Error(`Failed to load map-data (${res.status})`);

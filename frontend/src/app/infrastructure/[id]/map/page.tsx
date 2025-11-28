@@ -51,31 +51,31 @@ export default function MapPage() {
   // Fetch infrastructures list
   useEffect(() => {
     if (!mounted) return;
-    
+
     const fetchInfrastructures = async () => {
       try {
         const token = typeof window !== 'undefined'
           ? (() => {
-              const directToken = localStorage.getItem('token');
-              if (directToken) return directToken;
-              const supabaseKey = Object.keys(localStorage).find(key =>
-                key.includes('supabase') && key.includes('auth-token')
-              );
-              if (supabaseKey) {
-                try {
-                  const session = JSON.parse(localStorage.getItem(supabaseKey) || '{}');
-                  return session.access_token || null;
-                } catch {
-                  return null;
-                }
+            const directToken = localStorage.getItem('token');
+            if (directToken) return directToken;
+            const supabaseKey = Object.keys(localStorage).find(key =>
+              key.includes('supabase') && key.includes('auth-token')
+            );
+            if (supabaseKey) {
+              try {
+                const session = JSON.parse(localStorage.getItem(supabaseKey) || '{}');
+                return session.access_token || null;
+              } catch {
+                return null;
               }
-              return null;
-            })()
+            }
+            return null;
+          })()
           : null;
 
         if (!token) return;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -144,21 +144,21 @@ export default function MapPage() {
   }) => {
     const token = typeof window !== 'undefined'
       ? (() => {
-          const directToken = localStorage.getItem('token');
-          if (directToken) return directToken;
-          const supabaseKey = Object.keys(localStorage).find(key =>
-            key.includes('supabase') && key.includes('auth-token')
-          );
-          if (supabaseKey) {
-            try {
-              const session = JSON.parse(localStorage.getItem(supabaseKey) || '{}');
-              return session.access_token || null;
-            } catch {
-              return null;
-            }
+        const directToken = localStorage.getItem('token');
+        if (directToken) return directToken;
+        const supabaseKey = Object.keys(localStorage).find(key =>
+          key.includes('supabase') && key.includes('auth-token')
+        );
+        if (supabaseKey) {
+          try {
+            const session = JSON.parse(localStorage.getItem(supabaseKey) || '{}');
+            return session.access_token || null;
+          } catch {
+            return null;
           }
-          return null;
-        })()
+        }
+        return null;
+      })()
       : null;
 
     if (!token) {
@@ -188,7 +188,7 @@ export default function MapPage() {
       };
 
       promises.push(
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/process-insar`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/process-insar`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -206,7 +206,7 @@ export default function MapPage() {
     }
 
     await Promise.all(promises);
-    
+
     // Refresh map data after a short delay
     setTimeout(() => {
       refetch();

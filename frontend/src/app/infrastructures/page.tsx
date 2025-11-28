@@ -85,7 +85,7 @@ export default function InfrastructuresPage() {
       const token = localStorage.getItem('token') || (session as any)?.access_token || undefined;
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infra.id}/map-data?limit=3000`, { headers });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infra.id}/map-data?limit=3000`, { headers });
       if (!res.ok) return;
       const data = await res.json();
       setMapData(data);
@@ -113,7 +113,7 @@ export default function InfrastructuresPage() {
         minLon: String(bbox.minLon),
         maxLon: String(bbox.maxLon),
       }).toString();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${selectedInfra.id}/map-data?${qs}`, { headers });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${selectedInfra.id}/map-data?${qs}`, { headers });
       if (!res.ok) return;
       const data = await res.json();
       // Only apply if most recent
@@ -137,7 +137,7 @@ export default function InfrastructuresPage() {
 
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`, { headers });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`, { headers });
 
       if (!response.ok) {
         // If unauthorized/forbidden/not found, behave like empty state
@@ -164,7 +164,7 @@ export default function InfrastructuresPage() {
     const token = localStorage.getItem('token') || (session as any)?.access_token || undefined;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${id}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(body),
@@ -177,7 +177,7 @@ export default function InfrastructuresPage() {
     const token = localStorage.getItem('token') || (session as any)?.access_token || undefined;
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${id}`, {
       method: 'DELETE',
       headers,
     });

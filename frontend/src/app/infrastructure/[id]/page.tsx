@@ -85,7 +85,7 @@ export default function InfrastructurePage() {
         const token = await getSupabaseAccessToken() || localStorage.getItem('token');
         if (!token) return;
 
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
         if (res.ok) {
           const data = await res.json();
           setInfrastructures(data.infrastructures || []);
@@ -117,8 +117,8 @@ export default function InfrastructurePage() {
     try {
       setIsLoading(true);
       const [infraRes, mapRes] = await Promise.all([
-        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infrastructureId}`),
-        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infrastructureId}/map-data?limit=3000`),
+        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infrastructureId}`),
+        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infrastructureId}/map-data?limit=3000`),
       ]);
 
       if (!infraRes.ok) {
@@ -158,7 +158,7 @@ export default function InfrastructurePage() {
 
   const startJob = async () => {
     try {
-      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/process-insar`, {
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/process-insar`, {
         method: 'POST',
         body: JSON.stringify({ infrastructureId }),
       });
@@ -208,7 +208,7 @@ export default function InfrastructurePage() {
         };
 
         promises.push(
-          authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/process-insar`, {
+          authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/process-insar`, {
             method: 'POST',
             body: JSON.stringify(requestBody),
           }).then(async (res) => {
@@ -229,7 +229,7 @@ export default function InfrastructurePage() {
       }
 
       await Promise.all(promises);
-      
+
       // Refresh map data after a short delay
       setTimeout(() => {
         fetchAll(0);
@@ -249,7 +249,7 @@ export default function InfrastructurePage() {
   const pollJob = async (id: string) => {
     const interval = setInterval(async () => {
       try {
-        const r = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/${id}`);
+        const r = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${id}`);
         if (!r.ok) throw new Error('Failed to fetch job');
         const j = await r.json();
         setJobStatus(j.status);

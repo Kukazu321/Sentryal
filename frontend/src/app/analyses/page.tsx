@@ -105,7 +105,7 @@ export default function AnalysesPage() {
   // Fetch infrastructures
   const fetchInfrastructures = useCallback(async () => {
     try {
-      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
       if (res.ok) {
         const data = await res.json();
         setInfrastructures(data.infrastructures || []);
@@ -123,7 +123,7 @@ export default function AnalysesPage() {
 
       // First get all infrastructures
       await fetchInfrastructures();
-      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+      const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
       if (!res.ok) throw new Error('Failed to fetch infrastructures');
       const infraData = await res.json();
       const infras = infraData.infrastructures || [];
@@ -132,7 +132,7 @@ export default function AnalysesPage() {
       const allJobs: Job[] = [];
       for (const infra of infras) {
         try {
-          const jobsRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs?infrastructureId=${infra.id}`);
+          const jobsRes = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs?infrastructureId=${infra.id}`);
           if (jobsRes.ok) {
             const jobsData = await jobsRes.json();
             const infraJobs = (jobsData.jobs || []).map((job: any) => ({
@@ -463,8 +463,8 @@ export default function AnalysesPage() {
                           if (!confirm(`Are you sure you want to cancel this analysis?`)) return;
 
                           try {
-                            console.log('Appel DELETE', `${process.env.NEXT_PUBLIC_API_URL}/jobs/${job.id}`);
-                            const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/${job.id}`, {
+                            console.log('Appel DELETE', `${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${job.id}`);
+                            const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${job.id}`, {
                               method: 'DELETE',
                             });
                             console.log('Réponse DELETE', res);
@@ -494,7 +494,7 @@ export default function AnalysesPage() {
                           if (!confirm(`Are you sure you want to delete this analysis?`)) return;
 
                           try {
-                            const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/${job.id}`, {
+                            const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${job.id}`, {
                               method: 'DELETE',
                             });
                             if (res.ok) {
@@ -519,7 +519,7 @@ export default function AnalysesPage() {
                     <button
                       onClick={async () => {
                         try {
-                          const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/${job.id}`);
+                          const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/${job.id}`);
                           if (res.ok) {
                             const jobDetails = await res.json();
                             console.log('Job Details:', jobDetails);

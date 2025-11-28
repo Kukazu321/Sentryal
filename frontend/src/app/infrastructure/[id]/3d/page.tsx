@@ -40,7 +40,7 @@ export default function Infrastructure3DPage() {
           throw new Error('No authentication token found');
         }
 
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/infrastructures/${infrastructureId}`;
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infrastructureId}`;
         console.log('[3D-PAGE] 📡 Fetching from:', apiUrl);
 
         const response = await fetch(apiUrl, {

@@ -84,7 +84,7 @@ export default function NewAnalysisPage() {
     const fetchInfrastructures = async () => {
       try {
         setIsLoadingInfras(true);
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/infrastructures`);
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures`);
         if (res.ok) {
           const data = await res.json();
           const infras = data.infrastructures || [];
@@ -152,7 +152,7 @@ export default function NewAnalysisPage() {
       const jobIds: string[] = [];
 
       const createJob = async (requestBody: any, jobIds: string[]) => {
-        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs/process-insar`, {
+        const res = await authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/process-insar`, {
           method: 'POST',
           body: JSON.stringify(requestBody),
         });
