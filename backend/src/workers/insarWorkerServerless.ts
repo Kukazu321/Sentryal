@@ -7,6 +7,7 @@ import { asfDownloadService } from '../services/asfDownloadService';
 import { gdalService } from '../services/gdalService';
 import { velocityCalculationService } from '../services/velocityCalculationService';
 import { getRunPodService, RunPodServerlessService } from '../services/runpodServerlessService';
+import { databaseService } from '../services/databaseService';
 import prisma from '../db/client';
 import logger from '../utils/logger';
 import { jobsCompletedTotal, jobsFailedTotal, jobProcessingDurationSeconds } from '../metrics/metrics';
@@ -125,16 +126,13 @@ async function processInSARJobServerless(job: Job<InSARJobData>): Promise<void> 
             },
         });
 
-        // 3. Get infrastructure bbox
-        const bboxQuery = await prisma.$queryRaw<Array<{
-            bbox_geojson: string;
-        }>>`
-      SELECT ST_AsGeoJSON(ST_Envelope(bbox::geometry)) as bbox_geojson
-      FROM infrastructures
-      WHERE id = ${infrastructureId}
-    `;
+        // 3. Get infrastructure bbox from aggregated points (no direct bbox column required)
+        const bboxGeoJSON = await databaseService.getAggregatedBbox(infrastructureId);
 
-        const bboxGeoJSON = JSON.parse(bboxQuery[0].bbox_geojson);
+        if (!bboxGeoJSON) {
+            throw new Error(`No bbox could be computed for infrastructure ${infrastructureId}`);
+        }
+
         const coords = bboxGeoJSON.coordinates[0];
 
         // Extract bbox bounds
