@@ -6,6 +6,7 @@ import { config } from '../config';
 import { asfDownloadService } from '../services/asfDownloadService';
 import { getRunPodService, RunPodServerlessService } from '../services/runpodServerlessService';
 import { velocityCalculationService } from '../services/velocityCalculationService';
+import { databaseService } from '../services/databaseService';
 import prisma from '../db/client';
 import logger from '../utils/logger';
 import { jobsCompletedTotal, jobsFailedTotal, jobProcessingDurationSeconds } from '../metrics/metrics';
@@ -118,23 +119,11 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
 
     logger.info({ jobId }, 'Job status updated to PROCESSING');
 
-    // 4. Get infrastructure bbox (stored as JSON text, not PostGIS)
-    const infraResult = await prisma.$queryRaw<Array<{ bbox: string }>>`
-      SELECT bbox FROM infrastructures WHERE id = ${infrastructureId}
-    `;
+    // 4. Get infrastructure bbox from aggregated points (no direct bbox column needed)
+    const bboxGeoJSON = await databaseService.getAggregatedBbox(infrastructureId);
 
-    if (!infraResult[0] || !infraResult[0].bbox) {
-      throw new Error(`Infrastructure ${infrastructureId} not found or has no bbox`);
-    }
-
-    // Parse bbox from JSON string
-    let bboxGeoJSON: any;
-    try {
-      bboxGeoJSON = typeof infraResult[0].bbox === 'string'
-        ? JSON.parse(infraResult[0].bbox)
-        : infraResult[0].bbox;
-    } catch {
-      throw new Error('Invalid bbox format in infrastructure');
+    if (!bboxGeoJSON) {
+      throw new Error(`No bbox could be computed for infrastructure ${infrastructureId}`);
     }
 
     // Extract bbox bounds from GeoJSON Polygon
