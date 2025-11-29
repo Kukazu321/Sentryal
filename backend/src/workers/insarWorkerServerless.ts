@@ -175,6 +175,16 @@ async function processInSARJobServerless(job: Job<InSARJobData>): Promise<void> 
         // 7. Submit to RunPod Serverless
         logger.info({ jobId }, 'Submitting to RunPod Serverless');
 
+        // Downsample points to avoid payload size limits (RunPod limit ~10MB)
+        // Take 1 point every 10 points -> ~20k points for 200k total -> ~1.6MB payload
+        const downsampledPoints = points.filter((_, index) => index % 10 === 0);
+
+        logger.info({
+            jobId,
+            totalPoints: points.length,
+            sentPoints: downsampledPoints.length
+        }, 'Downsampled points for RunPod submission');
+
         const runpodInput = {
             job_id: jobId,
             infrastructure_id: infrastructureId,
@@ -183,7 +193,7 @@ async function processInSARJobServerless(job: Job<InSARJobData>): Promise<void> 
             reference_url: downloadUrls.reference,
             secondary_url: downloadUrls.secondary,
             bbox,
-            points: points.map(p => ({
+            points: downsampledPoints.map(p => ({
                 id: p.id,
                 lat: p.latitude,
                 lon: p.longitude
