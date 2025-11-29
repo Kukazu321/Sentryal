@@ -48,7 +48,7 @@ export class DatabaseService {
             geom: string | null;
             created_at: Date;
             updated_at: Date;
-        }>>\`
+        }>>`
       SELECT id, user_id, name, type, geom, created_at, updated_at
       FROM infrastructures
       WHERE id = ${infrastructureId}
@@ -469,6 +469,7 @@ export class DatabaseService {
         MAX(((geom::json->'coordinates')->>1)::float) AS max_lat
       FROM points
       WHERE infrastructure_id = ${infrastructureId}
+      AND geom IS NOT NULL
     `;
 
         const row = rows[0];
@@ -572,8 +573,11 @@ export class DatabaseService {
         } catch (error) {
             logger.error({
                 error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
                 jobId: id,
-                infrastructureId
+                infrastructureId,
+                statusEnum,
+                bboxLength: bboxJSON?.length
             }, 'Failed to INSERT job');
             throw error;
         }

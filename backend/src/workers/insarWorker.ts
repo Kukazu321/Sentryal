@@ -3,39 +3,30 @@ dotenv.config();
 
 import { Queue, Worker, Job } from 'bullmq';
 import { config } from '../config';
-import { gmtsarService } from '../services/gmtsarService';
-import { isceService } from '../services/isceService';
 import { asfDownloadService } from '../services/asfDownloadService';
-import { gdalService } from '../services/gdalService';
+import { getRunPodService, RunPodServerlessService } from '../services/runpodServerlessService';
 import { velocityCalculationService } from '../services/velocityCalculationService';
 import prisma from '../db/client';
 import logger from '../utils/logger';
 import { jobsCompletedTotal, jobsFailedTotal, jobProcessingDurationSeconds } from '../metrics/metrics';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { existsSync } from 'fs';
 
 /**
- * InSAR Worker - Processes InSAR jobs using GMTSAR
+ * InSAR Worker - Processes InSAR jobs using RunPod Serverless
  * 
- * Full Processing Pipeline:
- * 1. Setup GMTSAR working directory
- * 2. Download SAR granules from ASF
- * 3. Run GMTSAR processing workflow
- * 4. Extract displacement at infrastructure points
- * 5. Store results in database
+ * Pipeline:
+ *   1. Receive job from BullMQ
+ *   2. Get ASF download URLs
+ *   3. Submit to RunPod Serverless (ISCE3 on GPU)
+ *   4. Store displacement results in database
+ *   5. Calculate velocities
  */
 
 interface InSARJobData {
-  jobId: string; // Our DB job ID
+  jobId: string;
   infrastructureId: string;
   createdAt: number;
-  referenceGranule?: string; // Sentinel-1 granule name (reference image)
-  secondaryGranule?: string; // Sentinel-1 granule name (secondary image)
-  referenceGranulePath?: string; // Path to downloaded reference granule
-  secondaryGranulePath?: string; // Path to downloaded secondary granule
-  demPath?: string; // Path to DEM file
-  bbox?: { north: number; south: number; east: number; west: number };
+  referenceGranule?: string;
+  secondaryGranule?: string;
   hyp3JobId?: string | null;
 }
 
@@ -82,280 +73,204 @@ export const insarQueue = new Queue<InSARJobData>('insar-processing', {
   },
 });
 
-// Worker processor - GMTSAR Implementation
+// Worker processor - RunPod Serverless Implementation
 async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
-  const { jobId, infrastructureId, referenceGranule, secondaryGranule, demPath, bbox } = job.data;
+  const { jobId, infrastructureId, referenceGranule, secondaryGranule } = job.data;
   const startTime = Date.now();
-  let workingDir: string | null = null;
 
-  logger.info(
-    {
-      jobId,
-      attempt: job.attemptsMade,
-      referenceGranule,
-      secondaryGranule,
-    },
-    'Starting ISCE3 InSAR processing pipeline',
-  );
+  logger.info({
+    jobId,
+    attempt: job.attemptsMade,
+    referenceGranule,
+    secondaryGranule,
+  }, 'Starting RunPod Serverless InSAR processing');
+
+  let runpodService: RunPodServerlessService;
 
   try {
-    // 1. Verify ISCE3 installation
-    const isceCheck = await isceService.checkInstallation();
-    if (!isceCheck.installed) {
-      throw new Error(`ISCE3 not properly installed: ${isceCheck.error}`);
-    }
+    // 1. Initialize RunPod service
+    runpodService = getRunPodService();
+    logger.info({}, 'RunPod service initialized');
+  } catch (error) {
+    logger.error({ error }, 'Failed to initialize RunPod service');
+    throw error;
+  }
 
-    logger.info({ version: isceCheck.version }, 'ISCE3 verified');
-
-    // 2. Create working directory for this job
-    // Use Linux path for production
-    workingDir = path.join('/tmp', 'isce_processing', jobId);
-    await fs.mkdir(workingDir, { recursive: true });
-    logger.info({ jobId, workingDir }, 'Created ISCE3 working directory');
-
-    // 3. Verify job exists before updating
+  try {
+    // 2. Verify job exists
     const existingJob = await prisma.job.findUnique({
       where: { id: jobId },
       select: { id: true, status: true, infrastructure_id: true }
     });
 
     if (!existingJob) {
-      throw new Error(`Job ${jobId} not found in database. It may have been deleted.`);
+      throw new Error(`Job ${jobId} not found in database`);
     }
 
-    logger.info({ jobId, currentStatus: existingJob.status }, 'Job found, updating to PROCESSING');
-
-    // 4. Update job status to PROCESSING
+    // 3. Update status to PROCESSING
     await prisma.job.update({
       where: { id: jobId },
       data: {
         status: 'PROCESSING',
-        hy3_job_type: 'ISCE3',
+        hy3_job_type: 'RUNPOD_SERVERLESS',
       },
-      select: { id: true, status: true }
     });
 
-    // 5. Get infrastructure bbox for processing
-    const infra = await prisma.infrastructure.findUnique({
-      where: { id: infrastructureId }
-    });
+    logger.info({ jobId }, 'Job status updated to PROCESSING');
 
-    if (!infra) {
-      throw new Error(`Infrastructure ${infrastructureId} not found`);
-    }
-
-    // Extract bbox from infrastructure geometry
-    const bboxQuery = await prisma.$queryRaw<Array<{
-      bbox_geojson: any;
-    }>>`
-      SELECT ST_AsGeoJSON(bbox::geometry) as bbox_geojson
-      FROM infrastructures
-      WHERE id = ${infrastructureId}
+    // 4. Get infrastructure bbox (stored as JSON text, not PostGIS)
+    const infraResult = await prisma.$queryRaw<Array<{ bbox: string }>>`
+      SELECT bbox FROM infrastructures WHERE id = ${infrastructureId}
     `;
 
-    const bboxGeoJSON = JSON.parse(bboxQuery[0].bbox_geojson);
+    if (!infraResult[0] || !infraResult[0].bbox) {
+      throw new Error(`Infrastructure ${infrastructureId} not found or has no bbox`);
+    }
 
-    logger.info({ jobId, bbox: bboxGeoJSON }, 'Processing bbox retrieved');
+    // Parse bbox from JSON string
+    let bboxGeoJSON: any;
+    try {
+      bboxGeoJSON = typeof infraResult[0].bbox === 'string'
+        ? JSON.parse(infraResult[0].bbox)
+        : infraResult[0].bbox;
+    } catch {
+      throw new Error('Invalid bbox format in infrastructure');
+    }
 
-    // 6. Download SAR granules from ASF
-    logger.info({ jobId, referenceGranule, secondaryGranule }, 'Downloading SAR granules from ASF');
+    // Extract bbox bounds from GeoJSON Polygon
+    const coords = bboxGeoJSON.coordinates?.[0] || [];
+    const lons = coords.map((c: number[]) => c[0]);
+    const lats = coords.map((c: number[]) => c[1]);
+    const bbox = {
+      west: Math.min(...lons),
+      east: Math.max(...lons),
+      south: Math.min(...lats),
+      north: Math.max(...lats)
+    };
 
-    // Create raw directory for GMTSAR
-    const rawDir = path.join(workingDir, 'raw');
-    await fs.mkdir(rawDir, { recursive: true });
+    logger.info({ jobId, bbox }, 'Bbox extracted from infrastructure');
 
-    const downloadResult = await asfDownloadService.downloadInSARPair(
-      referenceGranule,
-      secondaryGranule,
-      rawDir
+    // 5. Get infrastructure points (geom stored as JSON text)
+    const pointsRaw = await prisma.$queryRaw<Array<{
+      id: string;
+      geom: string;
+    }>>`
+      SELECT id, geom FROM points
+      WHERE infrastructure_id = ${infrastructureId}
+      AND geom IS NOT NULL
+    `;
+
+    const points = pointsRaw.map(p => {
+      try {
+        const geomJson = JSON.parse(p.geom);
+        return {
+          id: p.id,
+          lat: geomJson.coordinates[1],
+          lon: geomJson.coordinates[0]
+        };
+      } catch {
+        return null;
+      }
+    }).filter(p => p !== null) as Array<{ id: string; lat: number; lon: number }>;
+
+    logger.info({ jobId, pointCount: points.length }, 'Retrieved infrastructure points');
+
+    // 6. Get ASF download URLs
+    logger.info({ jobId, referenceGranule, secondaryGranule }, 'Getting ASF download URLs');
+
+    const downloadUrls = await asfDownloadService.getDownloadUrls(
+      referenceGranule!,
+      secondaryGranule!
     );
 
-    if (downloadResult.error || !downloadResult.reference || !downloadResult.secondary) {
-      throw new Error(`Failed to download SAR data: ${downloadResult.error}`);
+    logger.info({ jobId }, 'ASF download URLs retrieved');
+
+    // 7. Build webhook URL for results (optional)
+    const webhookUrl = process.env.WEBHOOK_BASE_URL
+      ? `${process.env.WEBHOOK_BASE_URL}/api/webhook/runpod`
+      : undefined;
+
+    // 8. Submit to RunPod Serverless
+    logger.info({ jobId }, 'Submitting to RunPod Serverless');
+
+    const runpodInput = {
+      job_id: jobId,
+      infrastructure_id: infrastructureId,
+      reference_granule: referenceGranule!,
+      secondary_granule: secondaryGranule!,
+      reference_url: downloadUrls.reference,
+      secondary_url: downloadUrls.secondary,
+      bbox,
+      points,
+      webhook_url: webhookUrl
+    };
+
+    // Use sync mode - wait for completion (up to 45 min)
+    const result = await runpodService.submitJobSync(runpodInput, 45 * 60 * 1000);
+
+    if (!result || result.status !== 'success') {
+      throw new Error(`RunPod processing failed: ${result?.error || 'Unknown error'}`);
     }
 
     logger.info({
       jobId,
-      referencePath: downloadResult.reference,
-      secondaryPath: downloadResult.secondary
-    }, 'SAR granules downloaded successfully');
+      processingTime: result.processing_time_seconds,
+      validPoints: result.results?.statistics?.valid_points
+    }, 'RunPod processing completed');
 
-    // 7. Run ISCE3 InSAR processing
-    logger.info({ jobId }, 'Starting ISCE3 InSAR processing');
+    // 9. Store displacement results
+    const displacementPoints = result.results?.displacement_points || [];
 
-    const result = await isceService.processInSARPair({
-      referenceGranule: downloadResult.reference,
-      secondaryGranule: downloadResult.secondary,
-      bbox: bboxGeoJSON,
-      outputDir: workingDir
-    });
+    if (displacementPoints.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const batchSize = 100;
+      let insertedCount = 0;
 
-    if (!result.success) {
-      throw new Error(`ISCE3 processing failed: ${result.error}`);
-    }
+      for (let i = 0; i < displacementPoints.length; i += batchSize) {
+        const batch = displacementPoints.slice(i, i + batchSize);
 
-    logger.info(
-      {
-        jobId,
-        interferogram: result.interferogram,
-        coherence: result.coherence,
-        unwrapped: result.unwrapped,
-      },
-      'ISCE3 processing completed',
-    );
-
-    // 8. Extract displacement at infrastructure points
-    logger.info({ jobId, infrastructureId }, 'Extracting displacement at infrastructure points');
-
-    const points = await prisma.$queryRaw<
-      Array<{
-        id: string;
-        latitude: number;
-        longitude: number;
-      }>
-    >`
-      SELECT 
-        id,
-        ST_Y(geom::geometry) as latitude,
-        ST_X(geom::geometry) as longitude
-      FROM points
-      WHERE infrastructure_id = ${infrastructureId}
-    `;
-
-    logger.info({ jobId, pointCount: points.length }, 'Retrieved infrastructure points');
-
-    if (points.length === 0) {
-      logger.warn({ jobId, infrastructureId }, 'No points found for infrastructure');
-    } else {
-      // Extract real displacement values from ISCE3 GeoTIFF outputs using GDAL
-      logger.info({ jobId }, 'Extracting displacement values from GeoTIFF using GDAL');
-
-      // ISCE3 outputs are already geocoded GeoTIFFs
-      // displacement is in result.interferogram (which is actually the displacement map in our service implementation)
-      // Wait, let's check isceService implementation of result object
-      // It returns { interferogram: final_disp, coherence: final_coh, ... }
-
-      if (!result.interferogram || !result.coherence) {
-        throw new Error('ISCE3 did not produce required output files (displacement/coherence)');
-      }
-
-      const extractionResult = await gdalService.extractDisplacementAtPoints(
-        result.interferogram,
-        result.coherence,
-        points
-      );
-
-      const displacementPoints = extractionResult.points.filter(p => p.valid);
-
-      logger.info(
-        {
-          jobId,
-          pointsExtracted: displacementPoints.length,
-          validPoints: extractionResult.stats.validCount,
-          invalidPoints: extractionResult.stats.invalidCount,
-          meanDisplacement: extractionResult.stats.meanDisplacement,
-          meanCoherence: extractionResult.stats.meanCoherence,
-          displacementRange: {
-            min: extractionResult.stats.minDisplacement,
-            max: extractionResult.stats.maxDisplacement
-          }
-        },
-        'Displacement extracted from GeoTIFF',
-      );
-
-      // 9. Store deformations in database
-      if (displacementPoints.length > 0) {
-        logger.info(
-          {
-            jobId,
-            pointCount: displacementPoints.length,
-          },
-          'Storing deformations in database',
+        // Validate UUIDs
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const validBatch = batch.filter((p: any) =>
+          p.valid &&
+          uuidRegex.test(p.point_id) &&
+          !isNaN(p.displacement_mm)
         );
 
-        const batchSize = 100;
-        let insertedCount = 0;
+        if (validBatch.length === 0) continue;
 
-        for (let i = 0; i < displacementPoints.length; i += batchSize) {
-          const batch = displacementPoints.slice(i, i + batchSize);
+        const values = validBatch.map((point: any) => {
+          const coherence = !isNaN(point.coherence) ? point.coherence : 'NULL';
+          return `(gen_random_uuid(), '${point.point_id}'::uuid, '${jobId}'::uuid, '${today}', ${point.displacement_mm}, ${coherence}, NOW())`;
+        }).join(',\n');
 
-          // Validate and prepare batch data for parameterized insertion
-          const today = new Date().toISOString().split('T')[0];
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO deformations (
+            id, point_id, job_id, date, displacement_mm, coherence, created_at
+          ) VALUES ${values}
+          ON CONFLICT (point_id, job_id, date) DO UPDATE SET
+            displacement_mm = EXCLUDED.displacement_mm,
+            coherence = EXCLUDED.coherence
+        `);
 
-          // Validate all UUIDs in batch
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          for (const point of batch) {
-            if (!uuidRegex.test(point.pointId)) {
-              throw new Error(`Invalid point ID: ${point.pointId}`);
-            }
-          }
+        insertedCount += validBatch.length;
+      }
 
-          // Build parameterized VALUES - only validated numeric/uuid data
-          const values = batch
-            .map((point) => {
-              const coherence = !isNaN(point.coherence) ? point.coherence : 'NULL';
-              const displacement = !isNaN(point.losDisplacementMm) ? point.losDisplacementMm : 'NULL';
-              return `(gen_random_uuid(), '${point.pointId}'::uuid, '${jobId}'::uuid, '${today}', ${displacement}, ${coherence}, NOW())`;
-            })
-            .join(',\n');
+      logger.info({ jobId, insertedCount }, 'Deformations stored');
 
-          try {
-            // Note: values are validated (UUIDs checked, numbers validated with isNaN)
-            await prisma.$executeRawUnsafe(`
-              INSERT INTO deformations (
-                id,
-                point_id,
-                job_id,
-                date,
-                displacement_mm,
-                coherence,
-                created_at
-              ) VALUES ${values}
-              ON CONFLICT (point_id, job_id, date) DO UPDATE SET
-                displacement_mm = EXCLUDED.displacement_mm,
-                coherence = EXCLUDED.coherence
-            `);
-
-            insertedCount += batch.length;
-          } catch (insertError) {
-            logger.error(
-              {
-                error: insertError,
-                jobId,
-                batchNumber: Math.floor(i / batchSize) + 1,
-              },
-              'Batch insert failed',
-            );
-            throw insertError;
-          }
+      // 10. Calculate velocities
+      try {
+        const velocityUpdates = await velocityCalculationService.calculateInfrastructureVelocities(infrastructureId);
+        if (velocityUpdates.length > 0) {
+          await velocityCalculationService.updateVelocitiesInDatabase(velocityUpdates);
+          logger.info({ jobId, updatedPoints: velocityUpdates.length }, 'Velocities updated');
         }
-
-        logger.info({ jobId, insertedCount }, 'Deformations stored successfully');
-
-        // 9. Calculate velocities
-        logger.info({ jobId, infrastructureId }, 'Calculating velocities');
-        try {
-          const velocityUpdates = await velocityCalculationService.calculateInfrastructureVelocities(infrastructureId);
-
-          if (velocityUpdates.length > 0) {
-            await velocityCalculationService.updateVelocitiesInDatabase(velocityUpdates);
-            logger.info(
-              {
-                jobId,
-                updatedPoints: velocityUpdates.length,
-              },
-              'Velocities calculated and updated',
-            );
-          } else {
-            logger.info({ jobId }, 'Insufficient data for velocity calculation');
-          }
-        } catch (velocityError) {
-          logger.warn({ error: velocityError, jobId }, 'Velocity calculation failed (non-critical)');
-        }
+      } catch (velocityError) {
+        logger.warn({ error: velocityError, jobId }, 'Velocity calculation failed (non-critical)');
       }
     }
 
-    // 8. Update job status to SUCCEEDED
+    // 11. Update job status to SUCCEEDED
     const processingTime = Date.now() - startTime;
 
     await prisma.job.update({
@@ -364,48 +279,31 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
         status: 'SUCCEEDED',
         completed_at: new Date(),
         hy3_product_urls: {
-          interferogram: result.interferogram || '',
-          coherence: result.coherence || '',
-          unwrapped: result.unwrapped || '',
+          interferogram: result.results?.interferogram_url || '',
+          coherence: result.results?.coherence_url || '',
+          displacement: result.results?.displacement_url || '',
+          statistics: result.results?.statistics
         },
         processing_time_ms: processingTime
       },
-      select: { id: true, status: true }
     });
 
-    // 9. Cleanup working directory (optional in dev mode)
-    if (config.nodeEnv === 'production' && workingDir) {
-      try {
-        await fs.rm(workingDir, { recursive: true, force: true });
-        logger.info({ jobId, workingDir }, 'Cleaned up ISCE3 working directory');
-      } catch (cleanupError) {
-        logger.warn({ error: cleanupError, jobId }, 'Failed to cleanup working directory');
-      }
-    } else {
-      logger.info({ jobId, workingDir }, 'Kept ISCE3 working directory for debugging');
-    }
+    logger.info({
+      jobId,
+      processingTime,
+      status: 'SUCCEEDED',
+    }, 'InSAR job completed successfully');
 
-    logger.info(
-      {
-        jobId,
-        processingTime,
-        status: 'SUCCEEDED',
-      },
-      'InSAR job completed successfully',
-    );
   } catch (error) {
-    logger.error(
-      {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        jobId,
-        attempt: job.attemptsMade,
-      },
-      'InSAR job processing failed',
-    );
+    logger.error({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      jobId,
+      attempt: job.attemptsMade,
+    }, 'InSAR job processing failed');
 
     // Update job status to FAILED if retries exhausted
-    if (job.attemptsMade >= (job.opts.attempts || 120)) {
+    if (job.attemptsMade >= (job.opts.attempts || 3)) {
       try {
         await prisma.job.update({
           where: { id: jobId },
@@ -414,16 +312,14 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
             completed_at: new Date(),
             error_message: error instanceof Error ? error.message : 'Unknown error'
           },
-          select: { id: true, status: true }
         });
-
-        logger.error({ jobId }, 'Job marked as FAILED after max retries');
+        logger.error({ jobId }, 'Job marked as FAILED');
       } catch (dbError) {
         logger.error({ error: dbError, jobId }, 'Failed to update job status');
       }
     }
 
-    throw error; // Re-throw to trigger retry
+    throw error;
   }
 }
 

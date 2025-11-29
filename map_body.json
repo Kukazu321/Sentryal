@@ -1,0 +1,288 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.77734032372499,
+          25.57695458379303
+        ]
+      },
+      "properties": {
+        "pointId": "ae7b7a96-4328-4df8-bb46-c7c056e86738",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.77734032372499,
+          25.5770043784668
+        ]
+      },
+      "properties": {
+        "pointId": "1974bd45-84f5-4cb2-a123-f033f85f782c",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.77728512713324,
+          25.57695458379303
+        ]
+      },
+      "properties": {
+        "pointId": "004da159-fae4-49b4-9205-ad66c6dabc82",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.77728512713324,
+          25.5770043784668
+        ]
+      },
+      "properties": {
+        "pointId": "71b987f8-de53-4580-a9ca-2fd806441722",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.7772299305415,
+          25.576904789119258
+        ]
+      },
+      "properties": {
+        "pointId": "61b9c8a6-ba2e-4e83-8b23-526bbba9e370",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.7772299305415,
+          25.57695458379303
+        ]
+      },
+      "properties": {
+        "pointId": "cc261052-5577-44ff-924f-acf8e6433514",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.7772299305415,
+          25.5770043784668
+        ]
+      },
+      "properties": {
+        "pointId": "570f7ffc-a9f8-4f4f-8615-726606181329",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.7772299305415,
+          25.57705417314057
+        ]
+      },
+      "properties": {
+        "pointId": "a4e3f212-ad86-41fb-83b9-716554a5b5ef",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.77717473394975,
+          25.576854994445487
+        ]
+      },
+      "properties": {
+        "pointId": "50117a10-2e97-4a5c-9947-25aced004a97",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -97.77717473394975,
+          25.576904789119258
+        ]
+      },
+      "properties": {
+        "pointId": "059a1a43-924b-4928-8461-c4dd2b6887b7",
+        "latestDisplacement": null,
+        "latestVelocity": null,
+        "latestCoherence": null,
+        "latestDate": null,
+        "measurementCount": 0,
+        "color": "#808080",
+        "riskLevel": "unknown",
+        "trend": "unknown",
+        "metadata": {
+          "displacementRange": null,
+          "averageCoherence": null,
+          "dataQuality": "poor"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "infrastructureId": "1e37be62-f2a4-43bf-8bc9-e1f816ed7758",
+    "totalPoints": 202603,
+    "activePoints": 0,
+    "dateRange": {
+      "earliest": null,
+      "latest": null
+    },
+    "statistics": {
+      "averageDisplacement": null,
+      "minDisplacement": null,
+      "maxDisplacement": null,
+      "averageVelocity": null
+    },
+    "riskDistribution": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "stable": 0,
+      "unknown": 10
+    }
+  }
+}

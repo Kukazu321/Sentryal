@@ -76,6 +76,12 @@ function convertBigIntToNumber(obj: any): any {
 
 app.use(morgan('dev'));
 
+// DEBUG: Log all requests
+app.use((req, res, next) => {
+  console.log(`[DEBUG-REQUEST] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Ensure RBAC schema exists (idempotent)
 ensureRBACSchema().catch(() => {
   // Non-fatal in development
