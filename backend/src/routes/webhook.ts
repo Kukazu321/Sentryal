@@ -2,8 +2,51 @@ import { Router, Request, Response } from 'express';
 import logger from '../utils/logger';
 import prisma from '../db/client';
 import { velocityCalculationService } from '../services/velocityCalculationService';
+import axios from 'axios';
+import * as GeoTIFF from 'geotiff';
 
 const router = Router();
+
+/**
+ * Helper function to extract value from GeoTIFF at lat/lon
+ */
+async function extractValueFromGeoTIFF(image: any, lat: number, lon: number): Promise<number | null> {
+    try {
+        const origin = image.getOrigin();
+        const resolution = image.getResolution();
+        const bbox = image.getBoundingBox();
+
+        // Check if point is inside bbox
+        if (lon < bbox[0] || lon > bbox[2] || lat < bbox[1] || lat > bbox[3]) {
+            return null;
+        }
+
+        // Calculate pixel coordinates
+        const x = Math.floor((lon - origin[0]) / resolution[0]);
+        const y = Math.floor((lat - origin[1]) / resolution[1]);
+
+        const width = image.getWidth();
+        const height = image.getHeight();
+
+        if (x < 0 || x >= width || y < 0 || y >= height) {
+            return null;
+        }
+
+        // Read pixel value
+        const window = [x, y, x + 1, y + 1];
+        const rasters = await image.readRasters({ window });
+        const value = rasters[0][0];
+
+        // Check for NoData (usually -9999 or NaN)
+        if (value === -9999 || isNaN(value)) {
+            return null;
+        }
+
+        return value;
+    } catch (e) {
+        return null;
+    }
+}
 
 /**
  * POST /api/webhook/runpod
@@ -78,7 +121,77 @@ router.post('/runpod', async (req: Request, res: Response) => {
 
         // Process successful results
         if (status === 'success' && results) {
-            const { displacement_points, statistics, interferogram_url, coherence_url, displacement_url } = results;
+            const { statistics, interferogram_url, coherence_url, displacement_url } = results;
+            let { displacement_points } = results;
+
+            // If points missing but we have displacement URL, extract them here
+            if ((!displacement_points || displacement_points.length === 0) && displacement_url) {
+                logger.info({ jobId }, 'Extracting displacement points from raster...');
+
+                try {
+                    // 1. Get infrastructure points
+                    const points = await prisma.$queryRaw<Array<{
+                        id: string;
+                        latitude: number;
+                        longitude: number;
+                    }>>`
+                        SELECT id, ST_Y(geom::geometry) as latitude, ST_X(geom::geometry) as longitude
+                        FROM points
+                        WHERE infrastructure_id = ${existingJob.infrastructure_id}
+                    `;
+
+                    // 2. Download GeoTIFFs
+                    const dispResponse = await axios.get(displacement_url, { responseType: 'arraybuffer' });
+                    const dispTiff = await GeoTIFF.fromArrayBuffer(dispResponse.data);
+                    const dispImage = await dispTiff.getImage();
+
+                    let cohImage = null;
+                    if (coherence_url) {
+                        try {
+                            const cohResponse = await axios.get(coherence_url, { responseType: 'arraybuffer' });
+                            const cohTiff = await GeoTIFF.fromArrayBuffer(cohResponse.data);
+                            cohImage = await cohTiff.getImage();
+                        } catch (e) {
+                            logger.warn('Failed to download coherence raster, skipping coherence extraction');
+                        }
+                    }
+
+                    // 3. Extract values
+                    displacement_points = [];
+                    for (const point of points) {
+                        const disp = await extractValueFromGeoTIFF(dispImage, point.latitude, point.longitude);
+
+                        if (disp !== null) {
+                            let coh = 0;
+                            if (cohImage) {
+                                const cohVal = await extractValueFromGeoTIFF(cohImage, point.latitude, point.longitude);
+                                if (cohVal !== null) coh = cohVal;
+                            }
+
+                            displacement_points.push({
+                                point_id: point.id,
+                                displacement_mm: disp,
+                                coherence: coh,
+                                valid: true
+                            });
+                        }
+                    }
+
+                    logger.info({ jobId, count: displacement_points.length }, 'Extracted points from raster');
+
+                    // Update statistics
+                    if (!statistics) {
+                        results.statistics = {
+                            valid_points: displacement_points.length
+                        };
+                    } else {
+                        results.statistics.valid_points = displacement_points.length;
+                    }
+
+                } catch (extractionError) {
+                    logger.error({ error: extractionError, jobId }, 'Failed to extract points from raster');
+                }
+            }
 
             // Store displacement measurements
             if (displacement_points && displacement_points.length > 0) {
@@ -143,7 +256,7 @@ router.post('/runpod', async (req: Request, res: Response) => {
                         interferogram: interferogram_url || '',
                         coherence: coherence_url || '',
                         displacement: displacement_url || '',
-                        statistics: statistics || {}
+                        statistics: results.statistics || {}
                     }
                 }
             });
@@ -151,7 +264,7 @@ router.post('/runpod', async (req: Request, res: Response) => {
             logger.info({
                 jobId,
                 duration: Date.now() - startTime,
-                validPoints: statistics?.valid_points || 0
+                validPoints: results.statistics?.valid_points || 0
             }, 'RunPod job completed successfully');
         }
 
