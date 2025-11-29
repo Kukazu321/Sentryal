@@ -40,7 +40,7 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Convert BigInt to Number for JSON serialization
 app.use((req, res, next) => {
