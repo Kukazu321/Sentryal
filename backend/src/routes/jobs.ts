@@ -329,8 +329,9 @@ router.post(
         pairsCount: pairsToProcess.length
       }, '[PROCESS-INSAR] 13. Creating InSAR jobs');
 
-      const createdJobs = [];
-      const jobPromises = [];
+      const createdJobs: Array<any> = [];
+      const jobPromises: Array<Promise<any>> = [];
+      const createdJobsErrors: Array<any> = [];
 
       for (let i = 0; i < pairsToProcess.length; i++) {
         const pair = pairsToProcess[i];
@@ -404,7 +405,8 @@ router.post(
             jobId: job.id
           }, 'InSAR job created and queued');
         } catch (e) {
-          logger.error({ error: e, pairIndex: i }, '[PROCESS-INSAR] Error creating job for pair');
+          logger.error({ error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined, pairIndex: i }, '[PROCESS-INSAR] Error creating job for pair');
+          createdJobsErrors.push({ pairIndex: i, error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined });
           // Continue processing other pairs
         }
       }
@@ -414,9 +416,19 @@ router.post(
       logger.info({
         jobsCount: createdJobs.length,
         durationMs: duration,
-        parallel: shouldCreateMultipleJobs
-      }, 'InSAR jobs created successfully');
+        parallel: shouldCreateMultipleJobs,
+        errors: createdJobsErrors.length
+      }, 'InSAR jobs created (partial)');
 
+      // If no jobs were successfully created, return explicit error with captured errors
+      if (createdJobs.length === 0) {
+        logger.error({ infrastructureId, errors: createdJobsErrors }, '[PROCESS-INSAR] No jobs created for any pair');
+        res.status(500).json({
+          error: 'Failed to create any jobs',
+          details: createdJobsErrors.slice(0, 10)
+        });
+        return;
+      }
       // Frontend compatibility: return single jobId for single job, array for multiple
       if (shouldCreateMultipleJobs) {
         res.status(201).json({
