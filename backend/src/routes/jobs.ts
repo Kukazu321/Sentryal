@@ -605,5 +605,57 @@ router.delete(
   }
 );
 
+/**
+ * POST /api/jobs/cleanup-stale
+ * Mark all stale PROCESSING jobs as FAILED
+ * Jobs stuck in PROCESSING for more than 1 hour are considered stale
+ */
+router.post(
+  '/cleanup-stale',
+  async (req: Request, res: Response) => {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+      // Find all stale PROCESSING jobs
+      const staleJobs = await prisma.job.findMany({
+        where: {
+          status: 'PROCESSING',
+          created_at: { lt: oneHourAgo }
+        },
+        select: { id: true, created_at: true }
+      });
+
+      if (staleJobs.length === 0) {
+        res.json({ message: 'No stale jobs found', cleaned: 0 });
+        return;
+      }
+
+      // Mark them as FAILED
+      const result = await prisma.job.updateMany({
+        where: {
+          status: 'PROCESSING',
+          created_at: { lt: oneHourAgo }
+        },
+        data: {
+          status: 'FAILED',
+          completed_at: new Date(),
+          error_message: 'Job timed out (stale cleanup)'
+        }
+      });
+
+      logger.info({ cleaned: result.count }, 'Cleaned up stale jobs');
+
+      res.json({
+        message: `Cleaned up ${result.count} stale jobs`,
+        cleaned: result.count,
+        jobIds: staleJobs.map(j => j.id)
+      });
+    } catch (error) {
+      logger.error({ error }, 'Failed to cleanup stale jobs');
+      res.status(500).json({ error: 'Failed to cleanup stale jobs' });
+    }
+  }
+);
+
 export default router;
 
