@@ -182,8 +182,16 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
     // 8. Submit to RunPod Serverless (fire-and-forget)
     logger.info({ jobId }, 'Submitting to RunPod Serverless (fire-and-forget)');
 
-    // NOTE: Don't send all points (202k+) - payload too large for RunPod
-    // RunPod handler should fetch points via API callback if needed
+    // Downsample points to avoid payload size limits (RunPod limit ~10MB)
+    // Take 1 point every 10 points -> ~20k points for 200k total -> ~1.6MB payload
+    const downsampledPoints = points.filter((_, index) => index % 10 === 0);
+
+    logger.info({
+      jobId,
+      totalPoints: points.length,
+      sentPoints: downsampledPoints.length
+    }, 'Downsampled points for RunPod submission');
+
     const runpodInput = {
       job_id: jobId,
       infrastructure_id: infrastructureId,
@@ -192,7 +200,7 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       reference_url: downloadUrls.reference,
       secondary_url: downloadUrls.secondary,
       bbox,
-      point_count: points.length, // Just send count, not all points
+      points: downsampledPoints,
       webhook_url: webhookUrl,
       // Earthdata credentials for ASF downloads
       earthdata_username: process.env.EARTHDATA_USERNAME,
