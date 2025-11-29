@@ -394,6 +394,19 @@ export class DatabaseService {
     }
 
     /**
+     * Count points for an infrastructure (efficient)
+     */
+    async countPoints(infrastructureId: string) {
+        const result = await prisma.$queryRaw<Array<{ count: number }>>`
+            SELECT COUNT(*)::int as count
+            FROM points
+            WHERE infrastructure_id = ${infrastructureId}
+        `;
+
+        return result[0]?.count || 0;
+    }
+
+    /**
      * Get points within a bounding box
      * Note: Without PostGIS, we do simple in-memory filtering
      */
@@ -442,32 +455,28 @@ export class DatabaseService {
         type: 'Polygon';
         coordinates: number[][][];
     }> {
-        const result = await prisma.$queryRaw<Array<{ geom: string }>>`
-      SELECT geom
+        // Use SQL aggregation to compute min/max of coordinates without loading all rows
+        const rows = await prisma.$queryRaw<Array<{
+            min_lng: number | null;
+            max_lng: number | null;
+            min_lat: number | null;
+            max_lat: number | null;
+        }>>`
+      SELECT
+        MIN(((geom::json->'coordinates')->>0)::float) AS min_lng,
+        MAX(((geom::json->'coordinates')->>0)::float) AS max_lng,
+        MIN(((geom::json->'coordinates')->>1)::float) AS min_lat,
+        MAX(((geom::json->'coordinates')->>1)::float) AS max_lat
       FROM points
       WHERE infrastructure_id = ${infrastructureId}
     `;
 
-        if (!result || result.length === 0) {
+        const row = rows[0];
+        if (!row || row.min_lng === null || row.min_lat === null) {
             throw new Error('No points found for infrastructure');
         }
 
-        // Parse all points and compute bounding box
-        const points = result
-            .filter(r => r.geom)
-            .map(r => JSON.parse(r.geom))
-            .filter(g => g.type === 'Point');
-
-        if (points.length === 0) {
-            throw new Error('No valid points found for infrastructure');
-        }
-
-        const lngs = points.map(p => p.coordinates[0]);
-        const lats = points.map(p => p.coordinates[1]);
-        const minLng = Math.min(...lngs);
-        const maxLng = Math.max(...lngs);
-        const minLat = Math.min(...lats);
-        const maxLat = Math.max(...lats);
+        const { min_lng: minLng, max_lng: maxLng, min_lat: minLat, max_lat: maxLat } = row;
 
         return {
             type: 'Polygon',

@@ -206,12 +206,12 @@ router.post(
         userId: req.userId
       }, '[PROCESS-INSAR] 1. Request received');
 
-      // Check if infrastructure has points
-      logger.info({ infrastructureId }, '[PROCESS-INSAR] 2. Checking infrastructure has points');
-      const points = await databaseService.getPointsByInfrastructure(infrastructureId);
-      logger.info({ infrastructureId, pointCount: points.length }, '[PROCESS-INSAR] 3. Points retrieved');
+      // Check if infrastructure has points (use efficient count)
+      logger.info({ infrastructureId }, '[PROCESS-INSAR] 2. Checking infrastructure has points (count)');
+      const pointsCount = await databaseService.countPoints(infrastructureId);
+      logger.info({ infrastructureId, pointCount: pointsCount }, '[PROCESS-INSAR] 3. Points count retrieved');
 
-      if (points.length === 0) {
+      if (pointsCount === 0) {
         logger.warn({ infrastructureId }, '[PROCESS-INSAR] ERROR: No points found');
         res.status(400).json({
           error: 'Infrastructure has no points. Generate grid first.'
@@ -221,7 +221,7 @@ router.post(
 
       logger.info({
         infrastructureId,
-        pointsCount: points.length,
+        pointsCount: pointsCount,
         dateRange,
         targetDate,
         imageCount,
@@ -423,7 +423,7 @@ router.post(
           jobs: createdJobs,
           jobsCount: createdJobs.length,
           infrastructureId,
-          pointsCount: points.length,
+          pointsCount: pointsCount,
           bbox,
           estimatedDuration: `${createdJobs.length} jobs processing in parallel (3-5 min each)`,
           parallel: true,
@@ -438,7 +438,7 @@ router.post(
           createdAt: createdJobs[0]?.createdAt,
           pair: createdJobs[0]?.pair,
           infrastructureId,
-          pointsCount: points.length,
+          pointsCount: pointsCount,
           bbox,
           estimatedDuration: '3-5 minutes'
         });
