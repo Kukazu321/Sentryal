@@ -205,8 +205,8 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       webhook_url: webhookUrl
     };
 
-    // Use sync mode - wait for completion (up to 45 min)
-    const result = await runpodService.submitJobSync(runpodInput, 45 * 60 * 1000);
+    // Use sync mode - wait for completion (2 min timeout for debugging)
+    const result = await runpodService.submitJobSync(runpodInput, 2 * 60 * 1000);
 
     if (!result || result.status !== 'success') {
       throw new Error(`RunPod processing failed: ${result?.error || 'Unknown error'}`);
