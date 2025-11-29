@@ -168,7 +168,7 @@ export class RunPodServerlessService {
         }, 'Submitting sync job to RunPod Serverless');
 
         try {
-            const response = await this.client.post(`/${this.endpointId}/runsync`, {
+            const response = await this.client.post(`/${this.endpointId}/run`, {
                 input: {
                     ...input,
                     job_id: input.job_id // Ensure job_id is explicitly at top level in input

@@ -205,8 +205,40 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       webhook_url: webhookUrl
     };
 
-    // Use sync mode - wait for completion (2 min timeout for debugging)
-    const result = await runpodService.submitJobSync(runpodInput, 2 * 60 * 1000);
+    // Submit job asynchronously and poll for completion
+    logger.info({ jobId }, 'Submitting job to RunPod (async mode)');
+    const runpodJobId = await runpodService.submitJob(runpodInput);
+
+    logger.info({ jobId, runpodJobId }, 'Job submitted, polling for completion...');
+
+    // Poll for completion (2 min timeout)
+    const maxAttempts = 24; // 2 min / 5 sec = 24 attempts
+    let attempts = 0;
+    let result: any = null;
+
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+      try {
+        const status = await runpodService.getJobStatus(runpodJobId);
+        logger.info({ jobId, runpodJobId, status: status.status, attempt: attempts + 1 }, 'Polling RunPod status');
+
+        if (status.status === 'COMPLETED') {
+          result = status.output;
+          break;
+        } else if (status.status === 'FAILED') {
+          throw new Error(`RunPod job failed: ${JSON.stringify(status)}`);
+        }
+      } catch (pollError) {
+        logger.warn({ jobId, runpodJobId, error: pollError, attempt: attempts + 1 }, 'Failed to poll status, retrying...');
+      }
+
+      attempts++;
+    }
+
+    if (!result) {
+      throw new Error(`RunPod job timeout after ${maxAttempts * 5} seconds`);
+    }
 
     if (!result || result.status !== 'success') {
       throw new Error(`RunPod processing failed: ${result?.error || 'Unknown error'}`);
