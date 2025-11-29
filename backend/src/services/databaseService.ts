@@ -539,6 +539,13 @@ export class DatabaseService {
         const hy3JobType = data.hy3_job_type || null;
         const bboxJSON = data.bbox ? JSON.stringify(data.bbox) : null;
 
+        // Validate and prepare enum-casted status for Postgres JobStatus type
+        const allowedStatuses = ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
+        if (!allowedStatuses.includes(data.status)) {
+            throw new Error(`Invalid job status: ${data.status}`);
+        }
+        const statusEnum = data.status; // safe after validation
+
         logger.info({
             jobId: id,
             infrastructureId,
@@ -547,18 +554,20 @@ export class DatabaseService {
         }, 'Creating job in database');
 
         try {
-            await prisma.$executeRaw`
-          INSERT INTO jobs (id, infrastructure_id, hy3_job_id, hy3_job_type, status, bbox, created_at)
-          VALUES (
-            ${id},
-            ${infrastructureId},
-            ${hy3JobId},
-            ${hy3JobType},
-            ${data.status},
-            ${bboxJSON},
-            NOW()
-          )
-        `;
+            await prisma.$executeRaw(
+                Prisma.sql`
+                    INSERT INTO jobs (id, infrastructure_id, hy3_job_id, hy3_job_type, status, bbox, created_at)
+                    VALUES (
+                        ${id},
+                        ${infrastructureId},
+                        ${hy3JobId},
+                        ${hy3JobType},
+                        ${Prisma.raw(`'${statusEnum}'::"JobStatus"`)},
+                        ${bboxJSON},
+                        NOW()
+                    )
+                `
+            );
             logger.info({ jobId: id }, 'Job INSERT completed');
         } catch (error) {
             logger.error({
