@@ -20,7 +20,8 @@ import numpy as np
 logger = logging.getLogger("sentryal-utils")
 
 
-def download_granule(url: str, granule_name: str, output_dir: Path) -> Path:
+def download_granule(url: str, granule_name: str, output_dir: Path, 
+                     username: str = None, password: str = None) -> Path:
     """
     Download a Sentinel-1 granule from ASF or provided URL.
     
@@ -28,6 +29,8 @@ def download_granule(url: str, granule_name: str, output_dir: Path) -> Path:
         url: Download URL (ASF DataPool or pre-signed)
         granule_name: Name of the granule (for filename)
         output_dir: Directory to save the file
+        username: Earthdata username (optional, falls back to env)
+        password: Earthdata password (optional, falls back to env)
         
     Returns:
         Path to downloaded file
@@ -51,9 +54,9 @@ def download_granule(url: str, granule_name: str, output_dir: Path) -> Path:
     logger.info(f"Downloading: {granule_name}")
     logger.info(f"  URL: {url[:80]}...")
     
-    # Get ASF credentials from environment if needed
-    asf_username = os.environ.get("ASF_USERNAME")
-    asf_password = os.environ.get("ASF_PASSWORD")
+    # Get ASF credentials from parameters or environment
+    asf_username = username or os.environ.get("ASF_USERNAME") or os.environ.get("EARTHDATA_USERNAME")
+    asf_password = password or os.environ.get("ASF_PASSWORD") or os.environ.get("EARTHDATA_PASSWORD")
     
     # Setup session
     session = requests.Session()

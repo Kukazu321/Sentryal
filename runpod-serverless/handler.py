@@ -113,17 +113,25 @@ def handler(job: Dict[str, Any]) -> Dict[str, Any]:
         # Step 1: Download SAR granules
         logger.info("Step 1: Downloading SAR granules from ASF...")
         
+        # Get Earthdata credentials from input
+        earthdata_user = job_input.get("earthdata_username")
+        earthdata_pass = job_input.get("earthdata_password")
+        
         ref_path = download_granule(
             url=job_input["reference_url"],
             granule_name=job_input["reference_granule"],
-            output_dir=INPUT_DIR
+            output_dir=INPUT_DIR,
+            username=earthdata_user,
+            password=earthdata_pass
         )
         logger.info(f"  ✓ Reference downloaded: {ref_path}")
         
         sec_path = download_granule(
             url=job_input["secondary_url"],
             granule_name=job_input["secondary_granule"],
-            output_dir=INPUT_DIR
+            output_dir=INPUT_DIR,
+            username=earthdata_user,
+            password=earthdata_pass
         )
         logger.info(f"  ✓ Secondary downloaded: {sec_path}")
         
