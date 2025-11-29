@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { execSync } from 'child_process';
 import logger from '../utils/logger';
 import path from 'path';
@@ -40,12 +41,12 @@ export class ASFDownloadService {
 
             logger.info({ granuleName, searchUrl }, 'Fetching download URL from ASF');
 
-            const response = execSync(
-                `curl -s "${searchUrl}"`,
-                { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
-            );
+            const response = await axios.get(searchUrl, {
+                timeout: 30000,
+                headers: { 'Accept': 'application/json' }
+            });
 
-            const parsedResponse = JSON.parse(response);
+            const parsedResponse = response.data;
 
             // ASF returns [[{...}, {...}]] - flatten the nested array
             const results = Array.isArray(parsedResponse[0]) ? parsedResponse[0] : parsedResponse;
