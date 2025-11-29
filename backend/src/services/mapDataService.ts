@@ -230,28 +230,25 @@ class MapDataService {
       logger.info({ infrastructureId }, 'Fetching map data for infrastructure');
 
       // Single optimized query to get all point data with latest deformation
+      // NOTE: geom is stored as JSON text (no PostGIS), we parse coordinates in JS
       const limitValue = options?.limit && Number.isFinite(options.limit)
         ? Math.max(1, Math.min(100000, Math.floor(options.limit)))
         : undefined;
       const limitClause = limitValue ? Prisma.sql`LIMIT ${limitValue}` : Prisma.sql``;
-      const bbox = options?.bbox;
-      const bboxClause = bbox
-        ? Prisma.sql`AND p.geom && ST_MakeEnvelope(${bbox.minLon}, ${bbox.minLat}, ${bbox.maxLon}, ${bbox.maxLat}, 4326)`
-        : Prisma.sql``;
+      // bbox filtering done in JS since no PostGIS
 
       // Get total count of points for metadata (not impacted by preview limit)
       const totalCountRows = await prisma.$queryRaw<Array<{ count: number }>>(Prisma.sql`
         SELECT COUNT(*)::integer as count
         FROM points p
-        WHERE p.infrastructure_id::text = ${infrastructureId}
+        WHERE p.infrastructure_id = ${infrastructureId}
       `);
       const totalPoints = totalCountRows?.[0]?.count || 0;
 
       const pointsData = await prisma.$queryRaw<
         Array<{
           point_id: string;
-          longitude: number;
-          latitude: number;
+          geom: string;
           latest_displacement_mm: string | null;
           latest_velocity_mm_year: string | null;
           latest_coherence: string | null;
@@ -265,8 +262,7 @@ class MapDataService {
       >(Prisma.sql`
         SELECT 
           p.id::text as point_id,
-          ST_X(p.geom) as longitude,
-          ST_Y(p.geom) as latitude,
+          p.geom as geom,
           latest.displacement_mm::text as latest_displacement_mm,
           latest.velocity_mm_year::text as latest_velocity_mm_year,
           latest.coherence::text as latest_coherence,
@@ -298,19 +294,38 @@ class MapDataService {
           FROM deformations
           WHERE point_id = p.id
         ) stats ON true
-        WHERE p.infrastructure_id::text = ${infrastructureId}
-        ${bboxClause}
+        WHERE p.infrastructure_id = ${infrastructureId}
         ORDER BY p.created_at
         ${limitClause}
       `);
 
+      // Parse geom JSON and extract coordinates, apply bbox filter in JS
+      const bbox = options?.bbox;
+      const parsedPointsData = pointsData.map(p => {
+        let longitude = 0, latitude = 0;
+        try {
+          const geomObj = typeof p.geom === 'string' ? JSON.parse(p.geom) : p.geom;
+          if (geomObj && geomObj.coordinates) {
+            longitude = geomObj.coordinates[0];
+            latitude = geomObj.coordinates[1];
+          }
+        } catch (e) {
+          logger.warn({ geom: p.geom }, 'Failed to parse geom JSON');
+        }
+        return { ...p, longitude, latitude };
+      }).filter(p => {
+        if (!bbox) return true;
+        return p.longitude >= bbox.minLon && p.longitude <= bbox.maxLon &&
+          p.latitude >= bbox.minLat && p.latitude <= bbox.maxLat;
+      });
+
       logger.debug(
-        { infrastructureId, pointCount: pointsData.length },
+        { infrastructureId, pointCount: parsedPointsData.length },
         'Retrieved point data from database'
       );
 
       // Transform to GeoJSON features
-      const features: GeoJSONFeature[] = pointsData.map((point) => {
+      const features: GeoJSONFeature[] = parsedPointsData.map((point) => {
         const displacement_mm = point.latest_displacement_mm
           ? parseFloat(point.latest_displacement_mm)
           : null;
@@ -467,11 +482,11 @@ class MapDataService {
       return response;
     } catch (error) {
       logger.error(
-        { 
-          error, 
+        {
+          error,
           errorMessage: error instanceof Error ? error.message : String(error),
           errorStack: error instanceof Error ? error.stack : undefined,
-          infrastructureId 
+          infrastructureId
         },
         'Failed to generate map data'
       );
