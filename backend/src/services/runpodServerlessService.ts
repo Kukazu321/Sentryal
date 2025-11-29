@@ -30,11 +30,12 @@ interface RunPodJobInput {
         east: number;
         west: number;
     };
-    points: Array<{
+    points?: Array<{
         id: string;
         lat: number;
         lon: number;
     }>;
+    point_count?: number; // Send count instead of all points to reduce payload
     webhook_url?: string;
 }
 

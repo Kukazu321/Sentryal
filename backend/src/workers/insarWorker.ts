@@ -182,6 +182,8 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
     // 8. Submit to RunPod Serverless (fire-and-forget)
     logger.info({ jobId }, 'Submitting to RunPod Serverless (fire-and-forget)');
 
+    // NOTE: Don't send all points (202k+) - payload too large for RunPod
+    // RunPod handler should fetch points via API callback if needed
     const runpodInput = {
       job_id: jobId,
       infrastructure_id: infrastructureId,
@@ -190,7 +192,7 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       reference_url: downloadUrls.reference,
       secondary_url: downloadUrls.secondary,
       bbox,
-      points,
+      point_count: points.length, // Just send count, not all points
       webhook_url: webhookUrl
     };
 
