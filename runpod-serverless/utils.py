@@ -21,7 +21,8 @@ logger = logging.getLogger("sentryal-utils")
 
 
 def download_granule(url: str, granule_name: str, output_dir: Path, 
-                     username: str = None, password: str = None) -> Path:
+                     username: str = None, password: str = None,
+                     bearer_token: str = None) -> Path:
     """
     Download a Sentinel-1 granule from ASF or provided URL.
     
@@ -31,6 +32,7 @@ def download_granule(url: str, granule_name: str, output_dir: Path,
         output_dir: Directory to save the file
         username: Earthdata username (optional, falls back to env)
         password: Earthdata password (optional, falls back to env)
+        bearer_token: Earthdata Bearer token (preferred method)
         
     Returns:
         Path to downloaded file
@@ -54,21 +56,56 @@ def download_granule(url: str, granule_name: str, output_dir: Path,
     logger.info(f"Downloading: {granule_name}")
     logger.info(f"  URL: {url[:80]}...")
     
-    # Get ASF credentials from parameters or environment
+    # Get credentials from parameters or environment
     asf_username = username or os.environ.get("ASF_USERNAME") or os.environ.get("EARTHDATA_USERNAME")
     asf_password = password or os.environ.get("ASF_PASSWORD") or os.environ.get("EARTHDATA_PASSWORD")
     
-    # Setup session
+    logger.info(f"  Credentials available: user={'YES' if asf_username else 'NO'}, pass={'YES' if asf_password else 'NO'}")
+    
+    # Setup session with proper ASF/Earthdata authentication
     session = requests.Session()
     
     if asf_username and asf_password:
-        # Authenticate with ASF Earthdata Login
-        auth_url = "https://urs.earthdata.nasa.gov/oauth/authorize"
+        logger.info("  Setting up ASF authentication with username/password...")
+        
+        # Method: Use .netrc-style authentication that ASF expects
+        # This creates a .netrc file that curl/requests can use
+        import tempfile
+        
+        # Create temporary .netrc file
+        netrc_content = f"machine urs.earthdata.nasa.gov login {asf_username} password {asf_password}\n"
+        
+        # Write to home directory (where requests expects it)
+        home_dir = os.path.expanduser("~")
+        netrc_path = os.path.join(home_dir, ".netrc")
+        
+        try:
+            with open(netrc_path, 'w') as f:
+                f.write(netrc_content)
+            os.chmod(netrc_path, 0o600)  # Secure permissions
+            logger.info(f"  Created .netrc file at {netrc_path}")
+        except Exception as e:
+            logger.warning(f"  Failed to create .netrc: {e}")
+        
+        # Also set session auth as fallback
         session.auth = (asf_username, asf_password)
+        
+        # Set headers to mimic wget/curl behavior that ASF expects
+        session.headers.update({
+            'User-Agent': 'Wget/1.20.3 (linux-gnu)'
+        })
+    else:
+        logger.warning("  No Earthdata credentials available!")
     
-    # Download with progress
+    # Download with progress and longer timeout for large files
     try:
-        response = session.get(url, stream=True, timeout=30)
+        logger.info(f"  Starting download (this may take a while for ~4GB files)...")
+        response = session.get(url, stream=True, timeout=600, allow_redirects=True)
+        
+        # Log the final URL after redirects
+        logger.info(f"  Final URL: {response.url[:80]}...")
+        logger.info(f"  Response status: {response.status_code}")
+        
         response.raise_for_status()
         
         total_size = int(response.headers.get('content-length', 0))
