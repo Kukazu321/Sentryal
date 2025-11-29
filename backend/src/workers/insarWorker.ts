@@ -190,8 +190,8 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       ? `${process.env.WEBHOOK_BASE_URL}/api/webhook/runpod`
       : undefined;
 
-    // 8. Submit to RunPod Serverless
-    logger.info({ jobId }, 'Submitting to RunPod Serverless');
+    // 8. Submit to RunPod Serverless (fire-and-forget)
+    logger.info({ jobId }, 'Submitting to RunPod Serverless (fire-and-forget)');
 
     const runpodInput = {
       job_id: jobId,
@@ -205,120 +205,20 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       webhook_url: webhookUrl
     };
 
-    // Submit job asynchronously and poll for completion
-    logger.info({ jobId }, 'Submitting job to RunPod (async mode)');
     const runpodJobId = await runpodService.submitJob(runpodInput);
 
-    logger.info({ jobId, runpodJobId }, 'Job submitted, polling for completion...');
+    logger.info({ jobId, runpodJobId }, 'RunPod job submitted (no local polling, processing async)');
 
-    // Poll for completion (2 min timeout)
-    const maxAttempts = 24; // 2 min / 5 sec = 24 attempts
-    let attempts = 0;
-    let result: any = null;
-
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-
-      try {
-        const status = await runpodService.getJobStatus(runpodJobId);
-        logger.info({ jobId, runpodJobId, status: status.status, attempt: attempts + 1 }, 'Polling RunPod status');
-
-        if (status.status === 'COMPLETED') {
-          result = status.output;
-          break;
-        } else if (status.status === 'FAILED') {
-          throw new Error(`RunPod job failed: ${JSON.stringify(status)}`);
-        }
-      } catch (pollError) {
-        logger.warn({ jobId, runpodJobId, error: pollError, attempt: attempts + 1 }, 'Failed to poll status, retrying...');
-      }
-
-      attempts++;
-    }
-
-    if (!result) {
-      throw new Error(`RunPod job timeout after ${maxAttempts * 5} seconds`);
-    }
-
-    if (!result || result.status !== 'success') {
-      throw new Error(`RunPod processing failed: ${result?.error || 'Unknown error'}`);
-    }
-
-    logger.info({
-      jobId,
-      processingTime: result.processing_time_seconds,
-      validPoints: result.results?.statistics?.valid_points
-    }, 'RunPod processing completed');
-
-    // 9. Store displacement results
-    const displacementPoints = result.results?.displacement_points || [];
-
-    if (displacementPoints.length > 0) {
-      const today = new Date().toISOString().split('T')[0];
-      const batchSize = 100;
-      let insertedCount = 0;
-
-      for (let i = 0; i < displacementPoints.length; i += batchSize) {
-        const batch = displacementPoints.slice(i, i + batchSize);
-
-        // Validate UUIDs
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const validBatch = batch.filter((p: any) =>
-          p.valid &&
-          uuidRegex.test(p.point_id) &&
-          !isNaN(p.displacement_mm)
-        );
-
-        if (validBatch.length === 0) continue;
-
-        const values = validBatch.map((point: any) => {
-          const coherence = !isNaN(point.coherence) ? point.coherence : 'NULL';
-          return `(gen_random_uuid(), '${point.point_id}'::uuid, '${jobId}'::uuid, '${today}', ${point.displacement_mm}, ${coherence}, NOW())`;
-        }).join(',\n');
-
-        await prisma.$executeRawUnsafe(`
-          INSERT INTO deformations (
-            id, point_id, job_id, date, displacement_mm, coherence, created_at
-          ) VALUES ${values}
-          ON CONFLICT (point_id, job_id, date) DO UPDATE SET
-            displacement_mm = EXCLUDED.displacement_mm,
-            coherence = EXCLUDED.coherence
-        `);
-
-        insertedCount += validBatch.length;
-      }
-
-      logger.info({ jobId, insertedCount }, 'Deformations stored');
-
-      // 10. Calculate velocities
-      try {
-        const velocityUpdates = await velocityCalculationService.calculateInfrastructureVelocities(infrastructureId);
-        if (velocityUpdates.length > 0) {
-          await velocityCalculationService.updateVelocitiesInDatabase(velocityUpdates);
-          logger.info({ jobId, updatedPoints: velocityUpdates.length }, 'Velocities updated');
-        }
-      } catch (velocityError) {
-        logger.warn({ error: velocityError, jobId }, 'Velocity calculation failed (non-critical)');
-      }
-    }
-
-    // 11. Update job status to SUCCEEDED
-    const processingTime = Date.now() - startTime;
-
+    // Persist RunPod job id on our job record; keep status as PROCESSING
     await prisma.job.update({
       where: { id: jobId },
       data: {
-        status: 'SUCCEEDED',
-        completed_at: new Date(),
-        hy3_product_urls: {
-          interferogram: result.results?.interferogram_url || '',
-          coherence: result.results?.coherence_url || '',
-          displacement: result.results?.displacement_url || '',
-          statistics: result.results?.statistics
-        },
-        processing_time_ms: processingTime
+        hy3_job_id: runpodJobId,
       },
     });
+
+    const processingTime = Date.now() - startTime;
+
 
     logger.info({
       jobId,
