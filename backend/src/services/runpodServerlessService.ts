@@ -37,6 +37,10 @@ interface RunPodJobInput {
     }>;
     point_count?: number; // Send count instead of all points to reduce payload
     webhook_url?: string;
+    // Earthdata credentials for ASF downloads
+    earthdata_username?: string;
+    earthdata_password?: string;
+    earthdata_token?: string;
 }
 
 interface RunPodJobResponse {

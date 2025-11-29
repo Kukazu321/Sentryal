@@ -193,7 +193,11 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
       secondary_url: downloadUrls.secondary,
       bbox,
       point_count: points.length, // Just send count, not all points
-      webhook_url: webhookUrl
+      webhook_url: webhookUrl,
+      // Earthdata credentials for ASF downloads
+      earthdata_username: process.env.EARTHDATA_USERNAME,
+      earthdata_password: process.env.EARTHDATA_PASSWORD,
+      earthdata_token: process.env.EARTHDATA_BEARER_TOKEN
     };
 
     const runpodJobId = await runpodService.submitJob(runpodInput);
