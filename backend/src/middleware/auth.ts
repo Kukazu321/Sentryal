@@ -125,6 +125,7 @@ export async function verifySupabaseJWT(token: string): Promise<{ userId: string
 
   // DEBUG MODE: Skip signature verification, only check expiration
   // TODO: REVERT THIS AFTER DEBUGGING
+  console.log('!!! DEBUG: AUTH BYPASS ACTIVE !!!');
   const decoded = jwt.decode(token) as any;
 
   if (!decoded) {
