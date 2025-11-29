@@ -169,7 +169,10 @@ export class RunPodServerlessService {
 
         try {
             const response = await this.client.post(`/${this.endpointId}/runsync`, {
-                input
+                input: {
+                    ...input,
+                    job_id: input.job_id // Ensure job_id is explicitly at top level in input
+                }
             }, {
                 timeout: timeoutMs
             });

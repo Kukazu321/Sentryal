@@ -3,8 +3,8 @@ import { config } from './config';
 import { runMigrations } from './db/migrate';
 import logger from './utils/logger';
 
-// Don't import worker in main process - let it run separately if needed
-// import './workers/insarWorker';
+// Import worker to start processing jobs
+import './workers/insarWorker';
 
 const PORT = Number(process.env.PORT || config.port || 3001);
 
