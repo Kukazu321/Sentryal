@@ -170,7 +170,7 @@ router.get(
  */
 router.post(
   '/process-insar',
-  rateLimiter({ maxJobsPerHour: 5, maxJobsPerDay: 20, maxActiveJobs: 3 }),
+  rateLimiter({ maxJobsPerHour: 1000, maxJobsPerDay: 5000, maxActiveJobs: 100 }), // UNLIMITED FOR DEBUGGING
   validateBody(z.object({
     infrastructureId: z.string().uuid(),
     // Mode 1: Date range (existing)
