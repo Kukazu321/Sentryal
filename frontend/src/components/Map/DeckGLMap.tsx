@@ -68,6 +68,7 @@ const DeckGLMap: React.FC<DeckGLMapProps> = ({
     }, []);
 
     const initializeMap = () => {
+        console.log('🚀🚀🚀 [DECKGL] INITIALIZING DECKGL MAP - ULTRA PERFORMANCE MODE');
         const googleWindow = window as GoogleMapsWindow;
         if (!googleWindow.google?.maps || !mapContainerRef.current) return;
 

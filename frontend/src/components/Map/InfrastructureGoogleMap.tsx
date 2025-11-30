@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import type { MapDataResponse, MapDataPoint } from '@/types/api';
-
-// Use DeckGL for ultra-performance with thousands of points
-const DeckGLMap = dynamic(() => import('@/components/Map/DeckGLMap'), { ssr: false });
+import DeckGLMap from '@/components/Map/DeckGLMap';
 
 interface Props {
     data?: MapDataResponse;
