@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@arcgis/core": "^4.34.7",
+    "@deck.gl/core": "^9.2.2",
+    "@deck.gl/google-maps": "^9.2.2",
+    "@deck.gl/layers": "^9.2.2",
     "@googlemaps/markerclusterer": "^2.6.2",
     "@radix-ui/react-primitive": "^1.0.0",
     "@radix-ui/react-scroll-area": "^1.2.10",
@@ -21,6 +24,7 @@
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^1.2.1",
+    "deck.gl": "^9.2.2",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.553.0",
     "lz-string": "^1.5.0",

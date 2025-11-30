@@ -4,7 +4,8 @@ import React, { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { MapDataResponse, MapDataPoint } from '@/types/api';
 
-const Google3DMap = dynamic(() => import('@/components/Map/Google3DMap'), { ssr: false });
+// Use DeckGL for ultra-performance with thousands of points
+const DeckGLMap = dynamic(() => import('@/components/Map/DeckGLMap'), { ssr: false });
 
 interface Props {
     data?: MapDataResponse;
@@ -47,15 +48,12 @@ export default function InfrastructureGoogleMap({ data, onPointClick, onBoundsCh
     }, [features]);
 
     return (
-        <Google3DMap
+        <DeckGLMap
             lat={center.lat}
             lng={center.lng}
             zoom={12}
-            pitch={0}
-            bearing={0}
             className={className}
             points={points}
-            onBoundsChanged={onBoundsChanged}
             onPointClick={(p: any) => {
                 if (!onPointClick) return;
                 const pid = p?.pid as string | undefined;
