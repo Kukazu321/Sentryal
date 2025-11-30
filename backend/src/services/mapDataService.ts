@@ -295,6 +295,7 @@ class MapDataService {
           WHERE point_id = p.id
         ) stats ON true
         WHERE p.infrastructure_id = ${infrastructureId}
+          AND latest.displacement_mm IS NOT NULL
         ORDER BY p.created_at
         ${limitClause}
       `);
