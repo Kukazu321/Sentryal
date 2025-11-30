@@ -657,5 +657,36 @@ router.post(
   }
 );
 
+/**
+ * GET /api/jobs/:jobId/stats
+ * Get statistics for a job (deformations count, etc.)
+ */
+router.get('/:jobId/stats', async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+
+    // Count deformations for this job
+    const deformationCount = await prisma.deformation.count({
+      where: { job_id: jobId }
+    });
+
+    // Get unique points with data
+    const uniquePoints = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(DISTINCT point_id) as count
+      FROM deformations
+      WHERE job_id = ${jobId}::uuid
+    `;
+
+    res.json({
+      jobId,
+      deformationCount,
+      uniquePointsWithData: Number(uniquePoints[0]?.count || 0)
+    });
+  } catch (error) {
+    logger.error({ error, jobId: req.params.jobId }, 'Failed to get job stats');
+    res.status(500).json({ error: 'Failed to get job stats' });
+  }
+});
+
 export default router;
 
