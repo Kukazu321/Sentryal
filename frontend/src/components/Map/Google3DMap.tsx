@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { MarkerClusterer, SuperClusterAlgorithm } from '@googlemaps/markerclusterer';
 
 interface Google3DMapProps {
   lat: number;
@@ -48,6 +49,7 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const clustererRef = useRef<MarkerClusterer | null>(null); // MarkerClusterer for performance
   const heatmapRef = useRef<any>(null);
   const clickableMarkersRef = useRef<any[]>([]); // Invisible markers for click detection
   const boundsTimerRef = useRef<any>(null);
@@ -465,40 +467,78 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
     if (!mapRef.current || !googleWindow.google?.maps) return;
     const { Marker, LatLng, SymbolPath } = googleWindow.google.maps;
 
-    // Clear previous markers
+    // Clear previous clusterer and markers
+    if (clustererRef.current) {
+      clustererRef.current.clearMarkers();
+      clustererRef.current = null;
+    }
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
     if (!Array.isArray(points) || points.length === 0) return;
 
-    // STRICT LIMIT: Never render more than 10000 markers
-    const maxMarkers = 10000;
-    const step = Math.max(1, Math.ceil(points.length / maxMarkers));
-    const sampledPoints = points.filter((_, index) => index % step === 0);
+    console.log(`[GOOGLE3D] Creating clustered markers for ${points.length} points`);
 
-    // Create markers for sampled points only
-    sampledPoints.forEach((p) => {
+    // Create markers WITHOUT adding to map (clusterer will manage them)
+    const markers = points.map((p) => {
       const color = p.color || '#111111';
       const m = new Marker({
         position: new LatLng(p.lat, p.lng),
-        map: mapRef.current,
         icon: {
           path: SymbolPath.CIRCLE,
           fillColor: color,
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 1.5,
-          scale: 4,
+          scale: 6,
         },
         optimized: true,
       });
+      // Store point data on marker for click handling
+      (m as any)._pointData = p;
       if (typeof onPointClick === 'function') {
         m.addListener('click', () => onPointClick(p.point ?? p));
       }
-      markersRef.current.push(m);
+      return m;
     });
 
-    console.log(`[GOOGLE3D] Rendered ${markersRef.current.length} markers (sampled from ${points.length} total)`);
+    markersRef.current = markers;
+
+    // Create MarkerClusterer with SuperCluster algorithm (fastest)
+    clustererRef.current = new MarkerClusterer({
+      map: mapRef.current,
+      markers,
+      algorithm: new SuperClusterAlgorithm({
+        radius: 80,  // Cluster radius in pixels
+        maxZoom: 18, // Stop clustering at this zoom
+      }),
+      renderer: {
+        render: ({ count, position }) => {
+          // Custom cluster renderer
+          const color = count > 100 ? '#FF0000' : count > 50 ? '#FF6600' : count > 10 ? '#FFCC00' : '#00CC00';
+          return new Marker({
+            position,
+            icon: {
+              path: SymbolPath.CIRCLE,
+              fillColor: color,
+              fillOpacity: 0.9,
+              strokeColor: '#ffffff',
+              strokeWeight: 2,
+              scale: Math.min(20, 8 + Math.log2(count) * 3),
+            },
+            label: {
+              text: String(count),
+              color: '#ffffff',
+              fontSize: '11px',
+              fontWeight: 'bold',
+            },
+            zIndex: count,
+          });
+        },
+      },
+    });
+
+    console.log(`[GOOGLE3D] MarkerClusterer created with ${markers.length} markers`);
   }, [points, onPointClick, visualizationMode, updateHeatmap]);
 
   // Update visualization when points or mode changes

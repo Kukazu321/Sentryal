@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@arcgis/core": "^4.34.7",
+    "@googlemaps/markerclusterer": "^2.6.2",
     "@radix-ui/react-primitive": "^1.0.0",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-slot": "^1.0.2",
@@ -29,6 +30,7 @@
     "react-dom": "18.2.0",
     "recharts": "^3.4.1",
     "socket.io-client": "^4.8.1",
+    "supercluster": "^8.0.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.8"
