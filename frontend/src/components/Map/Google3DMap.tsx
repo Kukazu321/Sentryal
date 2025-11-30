@@ -239,18 +239,18 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
   // ULTRA-PERFORMANT: Heatmap rendering (WebGL native, handles 100k+ points)
   const updateHeatmap = useCallback(() => {
     const googleWindow = window as GoogleMapsWindow;
-    
+
     // Check if visualization library is available
     if (!mapRef.current) {
       console.warn('[GOOGLE3D] Map not ready for heatmap');
       return;
     }
-    
+
     if (!googleWindow.google?.maps) {
       console.warn('[GOOGLE3D] Google Maps not loaded');
       return;
     }
-    
+
     if (!googleWindow.google.maps.visualization) {
       console.error('[GOOGLE3D] Visualization library not loaded! Make sure libraries=visualization is in the script URL');
       return;
@@ -259,7 +259,7 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
     // Clear all visible markers when switching to heatmap
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
-    
+
     // Clear clickable markers (will be recreated)
     clickableMarkersRef.current.forEach(m => m.setMap(null));
     clickableMarkersRef.current = [];
@@ -284,10 +284,10 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
     const heatmapData = points.map((p: any) => {
       // Extract displacement from various possible locations
       let displacement = 0;
-      
+
       // Try different property paths (handle both direct properties and nested point.properties)
       const props = p.point?.properties || p.properties || {};
-      
+
       if (props.latestDisplacement !== undefined && props.latestDisplacement !== null) {
         displacement = Number(props.latestDisplacement);
       } else if (props.displacement_mm !== undefined && props.displacement_mm !== null) {
@@ -311,7 +311,7 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
           displacement = 1; // Stable/Unknown
         }
       }
-      
+
       // Weight based on absolute displacement (higher = more intense)
       // Use actual displacement values for accurate heatmap visualization
       // Normalize to 0-1 range based on realistic displacement scale (0-100mm)
@@ -371,10 +371,10 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
           let bounds: any = null;
           try {
             bounds = mapRef.current.getBounds();
-          } catch {}
+          } catch { }
 
           let pointsToMark = points;
-          
+
           // Filter to viewport if bounds available
           if (bounds) {
             pointsToMark = points.filter((p: any) => {
@@ -386,9 +386,9 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
             });
           }
 
-          // Limit to max 1000 markers even in viewport
-          if (pointsToMark.length > 1000) {
-            const step = Math.ceil(pointsToMark.length / 1000);
+          // Limit to max 20000 markers even in viewport
+          if (pointsToMark.length > 20000) {
+            const step = Math.ceil(pointsToMark.length / 20000);
             pointsToMark = pointsToMark.filter((_, index) => index % step === 0);
           }
 
@@ -471,8 +471,8 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
 
     if (!Array.isArray(points) || points.length === 0) return;
 
-    // STRICT LIMIT: Never render more than 500 markers
-    const maxMarkers = 500;
+    // STRICT LIMIT: Never render more than 10000 markers
+    const maxMarkers = 10000;
     const step = Math.max(1, Math.ceil(points.length / maxMarkers));
     const sampledPoints = points.filter((_, index) => index % step === 0);
 
@@ -504,17 +504,17 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
   // Update visualization when points or mode changes
   useEffect(() => {
     if (!mapRef.current) return;
-    
+
     // Wait a bit for Google Maps to be fully ready
     const timer = setTimeout(() => {
       // Use heatmap by default (best performance)
       const googleWindow = window as GoogleMapsWindow;
       const hasVisualization = googleWindow.google?.maps?.visualization;
-      
+
       console.log('[GOOGLE3D] Visualization mode:', visualizationMode);
       console.log('[GOOGLE3D] Has visualization library:', hasVisualization);
       console.log('[GOOGLE3D] Points count:', points.length);
-      
+
       if (visualizationMode === 'heatmap') {
         if (hasVisualization) {
           console.log('[GOOGLE3D] Updating heatmap...');
@@ -540,7 +540,7 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
         }, 100);
       }
     }, 500); // Wait 500ms for Google Maps to be ready
-    
+
     return () => clearTimeout(timer);
   }, [points, visualizationMode, updateHeatmap, updateMarkers]);
 
@@ -562,7 +562,7 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
       // Find the closest point within a reasonable distance
       // Radius adapts to zoom level for better UX
       const searchRadius = currentZoom > 16 ? 0.00005 : currentZoom > 14 ? 0.0001 : currentZoom > 12 ? 0.0003 : 0.0005;
-      
+
       let closestPoint: any = null;
       let minDistance = Infinity;
 
@@ -579,12 +579,12 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
             }
           });
         }
-      } catch {}
+      } catch { }
 
       pointsToSearch.forEach((p: any) => {
         const lat = p.lat;
         const lng = p.lng;
-        
+
         // Simple distance calculation (fast enough for viewport-filtered points)
         const latDiff = lat - clickLat;
         const lngDiff = lng - clickLng;
@@ -627,13 +627,13 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
       try {
         const newZoom = mapRef.current.getZoom();
         setCurrentZoom(newZoom);
-        
+
         // Adjust heatmap radius based on zoom (optional optimization)
         if (heatmapRef.current && visualizationMode === 'heatmap') {
           const radius = Math.max(15, Math.min(50, newZoom * 2));
           heatmapRef.current.set('radius', radius);
         }
-      } catch {}
+      } catch { }
     });
 
     return () => {
@@ -880,7 +880,7 @@ const Google3DMap: React.FC<Google3DMapProps> = ({
                 updateMarkers();
               }}
               className={`px-3 py-1.5 text-xs rounded ${visualizationMode === 'points' ? 'bg-black text-white' : 'bg-gray-100 text-gray-700'}`}
-              title="Points (limité à 500 pour performance)"
+              title="Points (limité à 10000 pour performance)"
             >
               ⚫ Points
             </button>
