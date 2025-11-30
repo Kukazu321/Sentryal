@@ -118,7 +118,7 @@ export default function InfrastructurePage() {
       setIsLoading(true);
       const [infraRes, mapRes] = await Promise.all([
         authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infrastructureId}`),
-        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infrastructureId}/map-data?limit=3000`),
+        authedFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/infrastructures/${infrastructureId}/map-data?limit=50000`),
       ]);
 
       if (!infraRes.ok) {
