@@ -10,7 +10,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.build.json || true",
     "start:prod": "node dist/index.js",
-    "start:production": "node dist/index.js & node dist/workers/insarWorkerServerless.js",
+    "start:production": "node dist/index.js",
     "start:worker": "node dist/workers/insarWorker.js",
     "start:worker:serverless": "node dist/workers/insarWorkerServerless.js",
     "lint": "eslint 'src/**/*.{ts,js}' --fix",
