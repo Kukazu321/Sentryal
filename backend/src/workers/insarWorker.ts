@@ -160,8 +160,8 @@ async function processInSARJob(job: Job<InSARJobData>): Promise<void> {
     logger.info({ jobId }, 'Submitting to RunPod Serverless (fire-and-forget)');
 
     // Downsample points to avoid payload size limits AND webhook timeout
-    // Take 1 point every 20 points -> ~10k points for 200k total -> faster insertion
-    const downsampledPoints = points.filter((_, index) => index % 20 === 0);
+    // Take 1 point every 10 points -> ~20k points for 200k total -> better coverage
+    const downsampledPoints = points.filter((_, index) => index % 10 === 0);
 
     logger.info({
       jobId,
