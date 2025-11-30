@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import logger from '../utils/logger';
 import prisma from '../db/client';
-import { velocityCalculationService } from '../services/velocityCalculationService';
+import { velocityQueue } from '../workers/velocityWorker';
 
 const router = Router();
 
@@ -118,17 +118,20 @@ router.post('/runpod', async (req: Request, res: Response) => {
 
                 logger.info({ jobId, insertedCount }, 'Deformations stored from webhook');
 
-                // Calculate velocities
+                // Queue velocity calculation (non-blocking, processed by worker)
                 try {
-                    const velocityUpdates = await velocityCalculationService.calculateInfrastructureVelocities(
-                        existingJob.infrastructure_id
-                    );
-                    if (velocityUpdates.length > 0) {
-                        await velocityCalculationService.updateVelocitiesInDatabase(velocityUpdates);
-                        logger.info({ jobId, updatedPoints: velocityUpdates.length }, 'Velocities updated');
-                    }
+                    await velocityQueue.add('calculate-velocity', {
+                        infrastructureId: existingJob.infrastructure_id,
+                        jobId,
+                        triggeredBy: 'webhook'
+                    }, {
+                        priority: 10, // High priority for webhook-triggered calculations
+                        removeOnComplete: true,
+                        removeOnFail: false,
+                    });
+                    logger.info({ jobId, infrastructureId: existingJob.infrastructure_id }, 'Velocity calculation queued');
                 } catch (velocityError) {
-                    logger.warn({ error: velocityError, jobId }, 'Velocity calculation failed (non-critical)');
+                    logger.warn({ error: velocityError, jobId }, 'Failed to queue velocity calculation (non-critical)');
                 }
             }
 

@@ -3,8 +3,9 @@ import { config } from './config';
 import { runMigrations } from './db/migrate';
 import logger from './utils/logger';
 
-// Import worker to start processing jobs
+// Import workers to start processing jobs
 import './workers/insarWorker';
+import './workers/velocityWorker';
 
 const PORT = Number(process.env.PORT || config.port || 3001);
 
